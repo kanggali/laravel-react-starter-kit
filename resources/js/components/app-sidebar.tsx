@@ -1,8 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import * as LucideIcons from 'lucide-react';
-import { LayoutGrid, LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -11,14 +10,15 @@ import {
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarGroup,
-    SidebarGroupLabel,
-    SidebarGroupContent,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+
 import type { NavItem, SharedData } from '@/types';
 
 const cleanTitle = (name: string): string => {
@@ -36,7 +36,7 @@ export function AppSidebar() {
         no_category: [
             {
                 title: 'Dashboard',
-                href: dashboard(),
+                url: dashboard().toString(),
                 icon: LayoutDashboard,
             },
         ],
@@ -45,20 +45,32 @@ export function AppSidebar() {
     sidebarData.forEach((menu: any) => {
         const categoryKey = menu.category || 'no_category';
 
+        // Icon untuk Menu Utama
+        const DynamicIcon =
+            (LucideIcons[
+                menu.icon as keyof typeof LucideIcons
+            ] as LucideIcon) || LayoutGrid;
+
         const item: NavItem = {
             title: cleanTitle(menu.name),
-            href: `/${menu.url}`,
-            icon:
-                (LucideIcons[
-                    menu.icon as keyof typeof LucideIcons
-                ] as LucideIcon) || LayoutGrid,
-            // Menggunakan sub_menus (snake_case) sesuai output standar Laravel
+            url: `/${menu.url}`,
+            icon: DynamicIcon,
             items:
-                menu.sub_menus?.length > 0
-                    ? menu.sub_menus.map((sub: any) => ({
-                          title: cleanTitle(sub.name),
-                          href: `/${sub.url}`,
-                      }))
+                menu.sub_menus && menu.sub_menus.length > 0
+                    ? menu.sub_menus.map((sub: any) => {
+                          // Icon untuk Sub Menu secara dinamis
+                          const SubIcon = sub.icon
+                              ? (LucideIcons[
+                                    sub.icon as keyof typeof LucideIcons
+                                ] as LucideIcon)
+                              : undefined;
+
+                          return {
+                              title: cleanTitle(sub.name),
+                              href: `/${sub.url}`,
+                              icon: SubIcon,
+                          };
+                      })
                     : undefined,
         };
 
@@ -66,7 +78,6 @@ export function AppSidebar() {
             groupedNavItems[categoryKey] = [];
         }
 
-        // Menambahkan baris kosong di sini untuk memenuhi aturan linter
         groupedNavItems[categoryKey].push(item);
     });
 
@@ -93,7 +104,7 @@ export function AppSidebar() {
                             </SidebarGroupLabel>
                         )}
                         <SidebarGroupContent>
-                            <NavMain items={items} />
+                            <NavMain items={items}/>
                         </SidebarGroupContent>
                     </SidebarGroup>
                 ))}

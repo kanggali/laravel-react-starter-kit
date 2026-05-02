@@ -8,11 +8,8 @@ export type BreadcrumbItem = {
 
 export type NavItem = {
     title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
+    url: string; // Diubah dari href menjadi url
     icon?: LucideIcon | null;
     isActive?: boolean;
-    items?: {
-        title: string;
-        href: NonNullable<InertiaLinkProps['href']>;
-    }[];
+    items?: NavItem[]; // Menggunakan tipe NavItem secara rekursif agar sub-menu mendukung icon dan url
 };

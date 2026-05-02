@@ -10,75 +10,91 @@ use Illuminate\Support\Facades\Cache;
 class MenuSeeder extends Seeder
 {
     use HasMenuPermission;
-    /**
-     * Run the database seeds.
-     */
+
     public function run(): void
     {
         Cache::forget('menus');
-        //Config
-        $mm = Menu::firstOrCreate(['url' => 'configuration'], [
+
+        // 1. KATEGORI MANAGEMENT
+        $mm = Menu::updateOrCreate(['url' => 'configuration'], [
             'name' => 'Configuration',
             'category' => 'MANAGEMENT',
-            'icon' => 'bi bi-gear-wide-connected',
+            'icon' => 'Settings',
+            'active' => 1,
+            'orders' => 1
         ]);
         $this->attachMenuPermission($mm, ['read'], ['administrator']);
 
-        $sm = $mm->subMenus()->create([
-            'name' => 'Menu',
-            'url' => $mm->url . '/menu',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, ['read', 'create', 'update', 'delete', 'sort'], ['administrator']);
+        // Sub Menu dengan penambahan icon Lucide
+        $subMenus = [
+            [
+                'name' => 'Menu',
+                'url' => '/menu',
+                'icon' => 'LayoutList',
+                'perms' => ['read', 'create', 'update', 'delete', 'sort']
+            ],
+            [
+                'name' => 'Roles',
+                'url' => '/roles',
+                'icon' => 'ShieldCheck',
+                'perms' => ['read', 'create', 'update', 'delete']
+            ],
+            [
+                'name' => 'Permission',
+                'url' => '/permissions',
+                'icon' => 'Key',
+                'perms' => ['read', 'create', 'update', 'delete']
+            ],
+            [
+                'name' => 'Access Role',
+                'url' => '/access-role',
+                'icon' => 'UserCog',
+                'perms' => ['read', 'update']
+            ],
+            [
+                'name' => 'Access User',
+                'url' => '/access-user',
+                'icon' => 'UserCheck',
+                'perms' => ['read', 'update']
+            ],
+            [
+                'name' => 'Users',
+                'url' => '/users',
+                'icon' => 'Users',
+                'perms' => null
+            ],
+        ];
 
-        $sm = $mm->subMenus()->create([
-            'name' => 'Roles',
-            'url' => $mm->url . '/roles',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, ['read', 'create', 'update', 'delete'], ['administrator']);
+        foreach ($subMenus as $index => $s) {
+            $sm = Menu::updateOrCreate(['url' => $mm->url . $s['url']], [
+                'name' => $s['name'],
+                'main_menu_id' => $mm->id,
+                'category' => $mm->category,
+                'icon' => $s['icon'], // Menyimpan icon sub-menu ke database
+                'active' => 1,
+                'orders' => $index + 1
+            ]);
+            $this->attachMenuPermission($sm, $s['perms'], ['administrator']);
+        }
 
-        $sm = $mm->subMenus()->create([
-            'name' => 'Permission',
-            'url' => $mm->url . '/permissions',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, ['read', 'create', 'update', 'delete'], ['administrator']);
-
-        $sm = $mm->subMenus()->create([
-            'name' => 'Access Role',
-            'url' => $mm->url . '/access-role',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, ['read', 'update'], ['administrator']);
-
-        $sm = $mm->subMenus()->create([
-            'name' => 'Access User',
-            'url' => $mm->url . '/access-user',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, ['read', 'update'], ['administrator']);
-
-        $sm = $mm->subMenus()->create([
-            'name' => 'Users',
-            'url' => $mm->url . '/users',
-            'category' => $mm->category,
-        ]);
-        $this->attachMenuPermission($sm, null, ['administrator']);
-
-        //DATA
-        $mm = Menu::firstOrCreate(['url' => 'referencies'], [
+        // 2. KATEGORI DATA
+        $mmData = Menu::updateOrCreate(['url' => 'referencies'], [
             'name' => 'Referencies',
             'category' => 'DATA',
-            'icon' => 'bi bi-book-half',
+            'icon' => 'Database',
+            'active' => 1,
+            'orders' => 2
         ]);
-        $this->attachMenuPermission($mm, null, ['administrator']);
+        $this->attachMenuPermission($mmData, null, ['administrator']);
 
-        $sm = $mm->subMenus()->create([
+        $smData = Menu::updateOrCreate(['url' => $mmData->url . '/menu-first'], [
             'name' => 'Menu First',
-            'url' => $mm->url . '/menu-first',
-            'category' => $mm->category,
+            'main_menu_id' => $mmData->id,
+            'category' => $mmData->category,
+            'icon' => 'FileText', // Icon untuk sub-menu di kategori DATA
+            'active' => 1,
+            'orders' => 1
         ]);
-        $this->attachMenuPermission($sm, ['read', 'create', 'update', 'delete'], ['administrator']);
+        $this->attachMenuPermission($smData, ['read', 'create', 'update', 'delete'], ['administrator']);
     }
 }
