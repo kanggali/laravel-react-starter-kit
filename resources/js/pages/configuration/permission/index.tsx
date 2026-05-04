@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { HelpCircle, Plus, Search } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/ui/confirm-modal';
@@ -22,42 +21,38 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
-import MenuFormModal from './form';
+import PermissionFormModal from './form';
 
-interface MenuData {
+interface PermissionData {
     id: number;
     name: string;
-    url: string;
-    category: string;
-    icon: string;
-    main_menu_id?: number | null;
-    sub_menus?: MenuData[];
+    guard_name: string;
+    created_at: string;
+    permissions_count?: number;
 }
 
 interface PaginationProps {
-    data: MenuData[];
+    data: PermissionData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
     to: number;
 }
 
-export default function MenuIndex({
-    menus,
+export default function PermissionIndex({
+    permissions,
     filters,
 }: {
-    menus: PaginationProps;
+    permissions: PaginationProps;
     filters: any;
 }) {
-    const confirm = useConfirm<MenuData>();
+    const confirm = useConfirm<PermissionData>();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editData, setEditData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
     const { can } = usePermission();
-
-    const parentMenus = menus.data.map((m) => ({ id: m.id, name: m.name }));
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -66,7 +61,7 @@ export default function MenuIndex({
                 perPage !== (filters.per_page || '10')
             ) {
                 router.get(
-                    route('configuration.menu.index'),
+                    route('configuration.permissions.index'),
                     { search: searchTerm, per_page: perPage, page: 1 },
                     {
                         preserveState: true,
@@ -85,8 +80,8 @@ export default function MenuIndex({
         setIsModalOpen(true);
     };
 
-    const handleEdit = (menu: any) => {
-        setEditData(menu);
+    const handleEdit = (permission: any) => {
+        setEditData(permission);
         setIsModalOpen(true);
     };
 
@@ -96,33 +91,36 @@ export default function MenuIndex({
         }
 
         setIsDeleting(true);
-        router.delete(route('configuration.menu.destroy', confirm.data?.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                confirm.close();
-                setIsDeleting(false);
+        router.delete(
+            route('configuration.permissions.destroy', confirm.data?.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    confirm.close();
+                    setIsDeleting(false);
+                },
+                onError: () => setIsDeleting(false),
             },
-            onError: () => setIsDeleting(false),
-        });
+        );
     };
 
     return (
         <>
-            <Head title="Menu Management" />
+            <Head title="Permission Management" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">
-                            Menu Management
+                            Permission Management
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Kelola hierarki menu navigasi sistem.
+                            Kelola permission navigasi sistem.
                         </p>
                     </div>
-                    {can('create configuration/menu') && (
+                    {can('create configuration/permissions') && (
                         <Button onClick={handleAdd}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Menu
+                            <Plus className="mr-2 h-4 w-4" /> Add Permission
                         </Button>
                     )}
                 </div>
@@ -132,7 +130,7 @@ export default function MenuIndex({
                         <div className="relative flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search menu..."
+                                placeholder="Search permission..."
                                 className="pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -151,7 +149,8 @@ export default function MenuIndex({
                         </select>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                        Showing {menus.from}-{menus.to} of {menus.total}
+                        Showing {permissions.from}-{permissions.to} of{' '}
+                        {permissions.total}
                     </div>
                 </div>
 
@@ -159,88 +158,49 @@ export default function MenuIndex({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-12">Icon</TableHead>
-                                <TableHead>Menu Name</TableHead>
-                                <TableHead>URL</TableHead>
-                                <TableHead>Category</TableHead>
+                                <TableHead className="w-12">#</TableHead>
+
+                                <TableHead>Permission</TableHead>
+                                <TableHead className="w-12">Guard</TableHead>
                                 <TableHead className="text-right">
                                     Actions
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {menus.data.length > 0 ? (
-                                menus.data.map((menu) => (
-                                    <React.Fragment key={menu.id}>
-                                        <TableRow className="bg-muted/30 font-medium">
-                                            <TableCell>
-                                                <IconRenderer
-                                                    iconName={menu.icon}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{menu.name}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                /{menu.url}
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold">
-                                                    {menu.category}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <TableAction
-                                                    onEdit={() =>
-                                                        handleEdit(menu)
-                                                    }
-                                                    onDelete={() =>
-                                                        confirm.open(menu)
-                                                    }
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-
-                                        {menu.sub_menus?.map((sub) => (
-                                            <TableRow
-                                                key={sub.id}
-                                                className="hover:bg-muted/10"
-                                            >
-                                                <TableCell className="text-center opacity-40">
-                                                    <IconRenderer
-                                                        iconName={sub.icon}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="pl-10 text-sm text-muted-foreground">
-                                                    {sub.name}
-                                                </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
-                                                    /{sub.url}
-                                                </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
-                                                    {sub.category}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <TableAction
-                                                        permissionEdit="update configuration/menu"
-                                                        onEdit={() =>
-                                                            handleEdit(sub)
-                                                        }
-                                                        permissionDelete="delete configuration/menu"
-                                                        onDelete={() =>
-                                                            confirm.open(sub)
-                                                        }
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </React.Fragment>
+                            {permissions.data.length > 0 ? (
+                                permissions.data.map((permission, idx) => (
+                                    <TableRow key={permission.id}>
+                                        <TableCell>
+                                            {permissions.from + idx}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {permission.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            {permission.guard_name}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <TableAction
+                                                permissionEdit="update configuration/permissions"
+                                                onEdit={() =>
+                                                    handleEdit(permission)
+                                                }
+                                                permissionDelete="delete configuration/permissions"
+                                                onDelete={() =>
+                                                    confirm.open(permission)
+                                                }
+                                            ></TableAction>
+                                        </TableCell>
+                                    </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5}
+                                        colSpan={4}
                                         className="h-24 text-center"
                                     >
-                                        No results found.
+                                        No permissions found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -251,7 +211,7 @@ export default function MenuIndex({
                 <div className="mt-4 flex justify-center">
                     <Pagination>
                         <PaginationContent>
-                            {menus.links.map((link, i) => (
+                            {permissions.links.map((link, i) => (
                                 <PaginationItem key={i}>
                                     <Button
                                         variant={
@@ -273,11 +233,10 @@ export default function MenuIndex({
                 </div>
             </div>
 
-            <MenuFormModal
+            <PermissionFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 editData={editData}
-                parentMenus={parentMenus}
             />
 
             <ConfirmModal
@@ -285,7 +244,7 @@ export default function MenuIndex({
                 onClose={confirm.close}
                 onConfirm={handleConfirmDelete}
                 loading={isDeleting}
-                title="Hapus Menu"
+                title="Hapus Permission"
                 description={
                     <span>
                         Apakah anda yakin akan menghapus data{' '}
@@ -294,16 +253,5 @@ export default function MenuIndex({
                 }
             />
         </>
-    );
-}
-
-function IconRenderer({ iconName }: { iconName: string }) {
-    const icons = LucideIcons as unknown as Record<string, React.ElementType>;
-    const Icon = icons[iconName];
-
-    return Icon ? (
-        <Icon className="size-4" />
-    ) : (
-        <HelpCircle className="size-4 text-muted-foreground/50" />
     );
 }

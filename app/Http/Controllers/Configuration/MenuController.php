@@ -3,45 +3,30 @@
 namespace App\Http\Controllers\Configuration;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreMenuRequest;
-use App\Http\Requests\UpdateMenuRequest;
+use App\Http\Requests\Configuration\Menu\StoreMenuRequest;
+use App\Http\Requests\Configuration\Menu\UpdateMenuRequest;
 use App\Models\Configuration\Menu;
+use App\Services\MenuService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class MenuController extends Controller
 {
+
+    protected MenuService $menuService;
+
+    public function __construct(MenuService $menuService)
+    {
+        $this->menuService = $menuService;
+    }
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        // Ambil hanya menu utama (parent)
-        $query = Menu::with(['subMenus' => function ($q) {
-            $q->orderBy('orders', 'asc');
-        }])->whereNull('main_menu_id');
-
-        // Logika Pencarian Case-Insensitive untuk PostgreSQL
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                // Menggunakan ILIKE agar tidak sensitif huruf besar/kecil
-                $q->where('name', 'ILIKE', "%{$search}%")
-                    ->orWhere('category', 'ILIKE', "%{$search}%")
-
-                    // Pencarian ke sub-menu
-                    ->orWhereHas('subMenus', function ($subQ) use ($search) {
-                        $subQ->where('name', 'ILIKE', "%{$search}%");
-                    });
-            });
-        }
-
         return Inertia::render('configuration/menu/index', [
-            'menus' => $query->orderBy('orders', 'asc')
-                ->paginate(10)
-                ->withQueryString(),
-            'filters' => $request->only(['search']),
+            'menus' => $this->menuService->getPaginatedMenus($request),
+            'filters' => $request->only(['search', 'per_page']),
         ]);
     }
 
@@ -91,8 +76,7 @@ class MenuController extends Controller
      */
     public function destroy(Menu $menu)
     {
-        $menu->delete();
-
+        $this->menuService->deleteMenu($menu->id);
         return back()->with('success', 'Menu deleted successfully.');
     }
 }

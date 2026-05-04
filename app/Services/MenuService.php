@@ -3,39 +3,49 @@
 namespace App\Services;
 
 use App\Models\Configuration\Menu;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class MenuService
 {
-    public function getMyMenu()
+    /**
+     * Mengambil menu dengan pencarian dinamis.
+     */
+    public function getPaginatedMenus(Request $request)
     {
-        $user = Auth::user();
-        // Cek apakah user adalah superadmin
-        $isSuperAdmin = $user->hasRole('superadmin');
+        $search = $request->input('search');
+        $perPage = $request->input('per_page', config('custom.per_page'));
 
         return Menu::query()
-            ->active()
-            ->with(['subMenus' => fn($q) => $q->active()->orderBy('orders')])
             ->whereNull('main_menu_id')
-            ->orderBy('orders')
-            ->get()
-            // Filter Menu Utama
-            ->filter(function ($menu) use ($user, $isSuperAdmin) {
-                // Jika superadmin, langsung lolos (true), jika tidak, cek permission
-                return $isSuperAdmin || $user->can("read {$menu->url}");
+            ->with(['subMenus' => function ($q) use ($search) {
+                $q->orderBy('orders', 'asc');
+                $q->when($search, function ($subQ) use ($search) {
+                    $subQ->where('name', 'ILIKE', "%{$search}%");
+                });
+            }])
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'ILIKE', "%{$search}%")
+                        ->orWhere('category', 'ILIKE', "%{$search}%")
+                        ->orWhereHas('subMenus', function ($subQ) use ($search) {
+                            $subQ->where('name', 'ILIKE', "%{$search}%");
+                        });
+                });
             })
-            ->map(function ($menu) use ($user, $isSuperAdmin) {
-                if ($menu->subMenus->isNotEmpty()) {
-                    $filtered = $menu->subMenus
-                        ->filter(function ($sm) use ($user, $isSuperAdmin) {
-                            // Berlaku juga untuk Sub Menu
-                            return $isSuperAdmin || $user->can("read {$sm->url}");
-                        })
-                        ->values();
-                    $menu->setRelation('subMenus', $filtered);
-                }
-                return $menu;
-            })
-            ->values();
+            ->orderBy('orders', 'asc')
+            ->paginate($perPage) // Gunakan variabel perPage
+            ->withQueryString();
+    }
+
+    public function deleteMenu(int $id)
+    {
+        $menu = Menu::findOrFail($id);
+
+        if ($menu->subMenus()->exists()) {
+            $menu->subMenus()->delete();
+        }
+
+        return $menu->delete();
     }
 }

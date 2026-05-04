@@ -44,9 +44,9 @@ createInertiaApp({
         // Definisikan rute global window sebelum render utama
         // @ts-expect-error - mendaftarkan fungsi global window
         window.route = (
-            name,
-            params,
-            absolute,
+            name: any,
+            params: any,
+            absolute: any,
             config = (props.initialPage.props as any).ziggy,
         ) => ziggyRoute(name, params, absolute, config);
 
@@ -54,7 +54,7 @@ createInertiaApp({
         root.render(
             <TooltipProvider delayDuration={0}>
                 <App {...props} />
-                <Toaster />
+                <Toaster richColors position="top-right" />
             </TooltipProvider>,
         );
     },
