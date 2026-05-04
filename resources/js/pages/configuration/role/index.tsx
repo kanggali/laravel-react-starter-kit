@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
-// import RoleFormModal from './form';
+import RoleFormModal from './form';
 
 interface RoleData {
     id: number;
@@ -113,7 +113,7 @@ export default function RoleIndex({
                             Role Management
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Kelola hierarki role navigasi sistem.
+                            Kelola role navigasi sistem.
                         </p>
                     </div>
                     <Button onClick={handleAdd}>
@@ -222,12 +222,11 @@ export default function RoleIndex({
                 </div>
             </div>
 
-            {/* <RoleFormModal
+            <RoleFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 editData={editData}
-                parentRoles={parentRoles}
-            /> */}
+            />
 
             <ConfirmModal
                 isOpen={confirm.isOpen}
