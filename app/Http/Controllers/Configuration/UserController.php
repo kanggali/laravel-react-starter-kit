@@ -84,6 +84,9 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        //
+        $this->userService->delete($user->id);
+        return back()->with('success', 'Menu deleted successfully.');
     }
+
+    
 }

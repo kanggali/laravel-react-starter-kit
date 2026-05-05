@@ -163,8 +163,7 @@
         background-color: var(--primary) !important;
         color: var(--primary-foreground) !important;
         border: none !important;
-        border-radius: calc(var(--radius) - 2px) !important;
-        /* HAPUS row-reverse, biarkan urutan natural: [×] [label] */
+        border-radius: calc(var(--radius) - 6px) !important;
         display: inline-flex !important;
         align-items: center !important;
         gap: 0.2rem !important;

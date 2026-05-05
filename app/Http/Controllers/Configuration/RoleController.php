@@ -74,11 +74,7 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        try {
-            $this->roleService->deleteRole($role);
-            return back()->with('success', 'Role updated successfully.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
-        }
+        $this->roleService->delete($role);
+        return back()->with('success', 'Role updated successfully.');
     }
 }

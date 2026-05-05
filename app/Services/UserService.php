@@ -34,4 +34,10 @@ class UserService
     {
         return Role::all(['id', 'name']);
     }
+
+    public function delete(int $id)
+    {
+        $user = User::findOrFail($id);
+        return $user->delete();
+    }
 }
