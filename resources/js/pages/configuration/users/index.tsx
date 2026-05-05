@@ -21,7 +21,7 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
-import UserFormModal from './form'; // Mengarah ke form.tsx di folder yang sama
+import UserFormModal from './form';
 
 interface UserData {
     id: number;
@@ -82,7 +82,7 @@ export default function UserIndex({
 
     const handleAdd = () => {
         setEditData(null);
-        setIsReadOnly(false);
+        setIsReadOnly(true);
         setIsModalOpen(true);
     };
 
@@ -248,7 +248,7 @@ export default function UserIndex({
             <UserFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                user={editData}
+                editUser={editData}
                 allRoles={allRoles}
                 isReadOnly={isReadOnly}
             />

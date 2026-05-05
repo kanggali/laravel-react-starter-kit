@@ -13,12 +13,7 @@ use Inertia\Inertia;
 class RoleController extends Controller
 {
 
-    protected RoleService $roleService;
-
-    public function __construct(RoleService $roleService)
-    {
-        $this->roleService = $roleService;
-    }
+    public function __construct(protected RoleService $roleService) {}
     /**
      * Display a listing of the resource.
      */

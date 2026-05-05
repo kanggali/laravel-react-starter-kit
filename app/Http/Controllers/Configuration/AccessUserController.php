@@ -3,51 +3,28 @@
 namespace App\Http\Controllers\Configuration;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Configuration\AccessRole\UpdateAccessRoleRequest;
 use App\Models\Configuration\Menu;
 use App\Models\User;
+use App\Services\AccessUserService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AccessUserController extends Controller
 {
+    public function __construct(
+        protected AccessUserService $accessUserService
+    ) {}
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $search = $request->input('search');
-        $perPage = $request->input('per_page', 10);
-
-        $users = User::query()
-            ->with(['roles', 'permissions'])
-            ->when($search, function ($query) use ($search) {
-                $query->where('name', 'ILIKE', "%{$search}%")
-                    ->orWhere('email', 'ILIKE', "%{$search}%");
-            })
-            ->latest()
-            ->paginate($perPage)
-            ->withQueryString();
-
-        $users->getCollection()->transform(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->roles->map(function ($role) {
-                    return [
-                        'id' => $role->id,
-                        'name' => $role->name,
-                    ];
-                }),
-                'permission_ids' => $user->permissions->pluck('id')->toArray(),
-            ];
-        });
-
         return Inertia::render('configuration/access-user/index', [
-            'users' => $users,
-            'filters' => $request->only(['search', 'per_page']),
-            'allMenus' => $this->getAllMenusWithPermissions(),
-            'allUsers' => User::select('id', 'name')->get(),
+            'users'    => $this->accessUserService->getPaginatedUsers($request),
+            'filters'  => $request->only(['search', 'per_page']),
+            'allMenus' => $this->accessUserService->getAllMenusWithPermissions(),
+            'allUsers' => $this->accessUserService->getUserOptions(),
         ]);
     }
 
@@ -114,9 +91,12 @@ class AccessUserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateAccessRoleRequest $request, User $user)
     {
-        $user->syncPermissions($request->permission_ids);
+        $this->accessUserService->syncUserPermissions(
+            $user,
+            $request->input('permission_ids')
+        );
 
         return back()->with('success', 'User permissions updated successfully.');
     }

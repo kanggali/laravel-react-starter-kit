@@ -3,32 +3,28 @@
 namespace App\Http\Controllers\Configuration;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\UserRequest;
+use App\Http\Requests\Configuration\User\UserRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
+
+    public function __construct(
+        protected UserService $userService
+    ) {}
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $users = User::query()
-            ->with('roles')
-            ->when($request->search, function ($query, $search) {
-                $query->where('name', 'ILIKE', "%{$search}%")
-                    ->orWhere('email', 'ILIKE', "%{$search}%");
-            })
-            ->paginate(10)
-            ->withQueryString();
-
         return Inertia::render('configuration/users/index', [
-            'users' => $users,
-            'allRoles' => Role::all(['id', 'name']),
-            'filters' => $request->only(['search']),
+            'users'    => $this->userService->getAllUsersWithFilters($request),
+            'allRoles' => $this->userService->getAvailableRoles(),
+            'filters'  => $request->only(['search']),
         ]);
     }
 
@@ -43,9 +39,17 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(UserRequest $request)
     {
-        //
+        $user = User::create([
+            ...$request->validated(),
+            'password' => bcrypt($request->password),
+            'email_verified_at' => now(),
+        ]);
+
+        $user->syncRoles($request->role_ids);
+
+        return back()->with('success', 'User created successfully.');
     }
 
     /**

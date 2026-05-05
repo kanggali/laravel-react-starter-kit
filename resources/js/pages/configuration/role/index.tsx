@@ -79,6 +79,7 @@ export default function RoleIndex({
 
     const handleAdd = () => {
         setEditData(null);
+        setIsReadOnly(true);
         setIsModalOpen(true);
     };
 

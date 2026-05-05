@@ -12,7 +12,7 @@ interface Role {
 }
 
 interface UserData {
-    id: number;
+    id: number | number;
     name: string;
     username: string;
     email: string;
@@ -22,7 +22,7 @@ interface UserData {
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    user: UserData | null;
+    editUser: UserData | null;
     allRoles: Role[];
     isReadOnly: boolean;
 }
@@ -30,54 +30,57 @@ interface Props {
 export default function UserFormModal({
     isOpen,
     onClose,
-    user,
+    editUser,
     allRoles,
     isReadOnly,
 }: Props) {
     const { data, setData, post, put, processing, reset, errors } = useForm({
+        id: null as number | null,
         name: '',
         username: '',
         email: '',
         role_ids: [] as number[],
+        password: '',
+        password_confirmation: '',
     });
 
     // Di dalam UserFormModal
     useEffect(() => {
         // Jalankan inisialisasi hanya saat modal terbuka
         if (isOpen) {
-            if (user) {
+            if (editUser) {
                 setData({
-                    name: user.name,
-                    username: user.username,
-                    email: user.email,
-                    role_ids: user.roles.map((r: any) => r.id),
+                    id: editUser.id,
+                    name: editUser.name,
+                    username: editUser.username,
+                    email: editUser.email,
+                    role_ids: editUser.roles.map((r: any) => r.id),
+                    password: '',
+                    password_confirmation: '',
                 });
             } else {
                 reset();
             }
         }
-        // reset dan setData aman dimasukkan karena referensinya stabil di useForm
-    }, [isOpen, user, reset, setData]);
+    }, [isOpen, editUser, reset, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isReadOnly) {
-            return;
-        }
+        const options = {
+            onSuccess: () => {
+                onClose();
+                reset();
+            },
+        };
 
-        if (user) {
-            put(route('configuration.user.update', user.id), {
-                onSuccess: () => onClose(),
-            });
+        if (data.id) {
+            put(route('configuration.users.update', data.id), options);
         } else {
-            post(route('configuration.user.store'), {
-                onSuccess: () => onClose(),
-            });
+            post(route('configuration.users.store'), options);
         }
     };
 
-    // Format options untuk Select2
     const roleOptions = allRoles.map((role) => ({
         id: role.id,
         text: role.name.toUpperCase(),
@@ -87,93 +90,150 @@ export default function UserFormModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={isReadOnly ? 'User Detail' : user ? 'Edit User' : 'Add User'}
+            title={
+                !isReadOnly
+                    ? `Detail User`
+                    : data?.id
+                      ? 'Edit User'
+                      : 'Add New User'
+            }
             maxWidth="2xl"
         >
             <form onSubmit={submit} className="space-y-6 p-1">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {/* Name Field */}
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                            id="name"
-                            value={data.name}
-                            disabled={isReadOnly}
-                            onChange={(e) => setData('name', e.target.value)}
-                            className={errors.name ? 'border-destructive' : ''}
-                        />
-                        {errors.name && (
-                            <p className="text-destructive text-xs">
-                                {errors.name}
-                            </p>
-                        )}
-                    </div>
+                <fieldset disabled={!isReadOnly} className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {/* Name Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                value={data.name}
+                                onChange={(e) =>
+                                    setData('name', e.target.value)
+                                }
+                                className={
+                                    errors.name ? 'border-destructive' : ''
+                                }
+                            />
+                            {errors.name && (
+                                <p className="text-xs text-destructive">
+                                    {errors.name}
+                                </p>
+                            )}
+                        </div>
 
-                    {/* Username Field */}
-                    <div className="space-y-2">
-                        <Label htmlFor="username">Username</Label>
-                        <Input
-                            id="username"
-                            value={data.username}
-                            disabled={isReadOnly}
-                            onChange={(e) =>
-                                setData('username', e.target.value)
-                            }
-                            className={
-                                errors.username ? 'border-destructive' : ''
-                            }
-                        />
-                        {errors.username && (
-                            <p className="text-destructive text-xs">
-                                {errors.username}
-                            </p>
-                        )}
-                    </div>
+                        {/* Username Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Username</Label>
+                            <Input
+                                id="username"
+                                value={data.username}
+                                onChange={(e) =>
+                                    setData('username', e.target.value)
+                                }
+                                className={
+                                    errors.username ? 'border-destructive' : ''
+                                }
+                            />
+                            {errors.username && (
+                                <p className="text-xs text-destructive">
+                                    {errors.username}
+                                </p>
+                            )}
+                        </div>
 
-                    {/* Email Field */}
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            value={data.email}
-                            disabled={isReadOnly}
-                            onChange={(e) => setData('email', e.target.value)}
-                            className={errors.email ? 'border-destructive' : ''}
-                        />
-                        {errors.email && (
-                            <p className="text-destructive text-xs">
-                                {errors.email}
-                            </p>
-                        )}
-                    </div>
+                        {/* Email Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={data.email}
+                                onChange={(e) =>
+                                    setData('email', e.target.value)
+                                }
+                                className={
+                                    errors.email ? 'border-destructive' : ''
+                                }
+                            />
+                            {errors.email && (
+                                <p className="text-xs text-destructive">
+                                    {errors.email}
+                                </p>
+                            )}
+                        </div>
 
-                    {/* Multi-Select Roles (Select2) */}
-                    <div className="space-y-2">
-                        <Label>Roles</Label>
-                        <Select2
-                            multiple={true}
-                            options={roleOptions}
-                            value={data.role_ids}
-                            disabled={isReadOnly}
-                            placeholder="Select multiple roles..."
-                            onChange={(values: number[]) =>
-                                setData('role_ids', values)
-                            }
-                        />
-                        {errors.role_ids && (
-                            <p className="text-destructive text-xs">
-                                {errors.role_ids}
-                            </p>
-                        )}
+                        {/* Multi-Select Roles (Select2) */}
+                        <div className="space-y-2">
+                            <Label>Roles</Label>
+                            <Select2
+                                multiple={true}
+                                options={roleOptions}
+                                value={data.role_ids}
+                                disabled={!isReadOnly}
+                                placeholder="Select multiple roles..."
+                                onChange={(values: number[]) =>
+                                    setData('role_ids', values)
+                                }
+                            />
+                            {errors.role_ids && (
+                                <p className="text-xs text-destructive">
+                                    {errors.role_ids}
+                                </p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                    {!editUser && (
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Enter password"
+                                    value={data.password}
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
+                                    className={
+                                        errors.password
+                                            ? 'border-destructive'
+                                            : ''
+                                    }
+                                />
+                                {errors.password && (
+                                    <p className="text-xs text-destructive">
+                                        {errors.password}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="password_confirmation">
+                                    Confirm Password
+                                </Label>
+                                <Input
+                                    id="password_confirmation"
+                                    type="password"
+                                    placeholder="Enter confirm password"
+                                    value={data.password_confirmation}
+                                    onChange={(e) =>
+                                        setData(
+                                            'password_confirmation',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </div>
+                        </div>
+                    )}
+                </fieldset>
 
                 <div className="flex justify-end gap-3 border-t pt-6">
                     <Button type="button" variant="outline" onClick={onClose}>
-                        {isReadOnly ? 'Close' : 'Cancel'}
+                        Cancel
                     </Button>
-                    {!isReadOnly && (
+                    {isReadOnly && (
                         <Button type="submit" disabled={processing}>
                             {processing ? 'Saving...' : 'Save User'}
                         </Button>

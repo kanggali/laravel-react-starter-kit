@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\User;
+namespace App\Http\Requests\Configuration\User;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,21 +23,42 @@ class UserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isStore = $this->routeIs('configuration.user.store');
+
         return [
-            'name' => 'required|string|max:255',
+            'name' => ['required', 'string', 'max:255'],
             'username' => [
-                Rule::requiredIf(request()->routeIs('configuration.users.store')),
-                Rule::unique('users')->ignore($this->user)
+                'required',
+                'string',
+                'max:255',
+                // Pastikan unik, abaikan ID user saat ini jika sedang update
+                Rule::unique('users', 'username')->ignore($this->user?->id),
             ],
             'email' => [
                 'required',
-                Rule::unique('users')->ignore($this->user)
+                'email',
+                'max:255',
+                // Pastikan unik, abaikan ID user saat ini jika sedang update
+                Rule::unique('users', 'email')->ignore($this->user?->id),
             ],
+            // Tambahkan validasi untuk role_ids yang dikirim dari Select2
+            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids.*' => ['exists:roles,id'],
+
+            // Password hanya wajib diisi saat store (tambah user baru)
             'password' => [
-                Rule::requiredIf(request()->routeIs('configuration.users.store')),
+                $isStore ? 'required' : 'nullable',
                 'confirmed',
-                'min:8'
-            ]
+                'min:8',
+            ],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'role_ids' => 'roles',
+            'role_ids.*' => 'role',
         ];
     }
 }
