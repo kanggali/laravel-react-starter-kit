@@ -135,7 +135,7 @@ export default function AccessRoleFormModal({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (role && !isReadOnly) {
+        if (role && isReadOnly) {
             put(route('configuration.access-role.update', role.id), {
                 preserveScroll: true,
                 onSuccess: () => onClose(),

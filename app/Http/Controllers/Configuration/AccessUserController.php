@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Configuration;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
 use App\Models\Configuration\Menu;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -92,7 +90,7 @@ class AccessUserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreUserRequest $request)
+    public function store(Request $request)
     {
         //
     }
@@ -116,7 +114,7 @@ class AccessUserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateUserRequest $request, User $user)
+    public function update(Request $request, User $user)
     {
         $user->syncPermissions($request->permission_ids);
 

@@ -137,7 +137,7 @@ export default function AccessUserFormModal({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (user && !isReadOnly) {
+        if (user && isReadOnly) {
             put(route('configuration.access-user.update', user.id), {
                 preserveScroll: true,
                 onSuccess: () => onClose(),

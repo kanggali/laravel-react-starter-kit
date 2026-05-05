@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Configuration;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Configuration\AccessRole\UpdateAccessRoleRequest;
 use App\Models\Configuration\Menu;
 use App\Models\Role;
 use Illuminate\Http\Request;
@@ -108,7 +107,7 @@ class AccessRoleController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateAccessRoleRequest $request, Role $role)
+    public function update(Request $request, Role $role)
     {
         $permissionIds = $request->input('permission_ids');
 

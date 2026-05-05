@@ -141,3 +141,72 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Container Utama Select2 */
+.select2-container--default .select2-selection--multiple {
+    @apply flex min-h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors;
+    border-radius: calc(var(--radius) - 2px); /* Mengikuti radius shadcn */
+}
+
+/* State Focus */
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    @apply outline-none ring-1 ring-ring border-input;
+}
+
+/* Styling Tag / Choice Item */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    @apply inline-flex items-center rounded-sm border px-1 py-0.5 text-xs font-semibold transition-colors;
+    background-color: #22d3ee; /* Warna Cyan sesuai image_2c45c1.png */
+    border-color: #22d3ee;
+    color: white;
+    margin-right: 4px;
+    margin-top: 2px;
+}
+
+/* Tombol Hapus pada Tag */
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    @apply mr-1 border-r-0 text-white hover:text-white/80 transition-colors;
+    border-color: transparent;
+    padding-right: 4px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    background-color: transparent;
+}
+
+/* Placeholder */
+.select2-search__field::placeholder {
+    @apply text-muted-foreground;
+}
+
+/* Dropdown Menu (Shadcn Popover Style) */
+.select2-dropdown {
+    @apply z-50 min-w-32 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80;
+}
+
+/* Search Box di dalam Dropdown */
+.select2-container--default .select2-search--inline .select2-search__field {
+    @apply mt-0 text-sm bg-transparent;
+    font-family: inherit;
+}
+
+/* List Item Dropdown */
+.select2-container--default .select2-results__option {
+    @apply relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none;
+}
+
+/* Hover/Highlight pada List Item */
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    @apply bg-accent text-accent-foreground;
+}
+
+/* Selected Item di Dropdown */
+.select2-container--default .select2-results__option[aria-selected=true] {
+    @apply bg-muted text-muted-foreground;
+}
+
+/* Tombol Clear (X di ujung kanan) */
+.select2-container--default .select2-selection--multiple .select2-selection__clear {
+    @apply absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground;
+    margin-top: 0;
+}
