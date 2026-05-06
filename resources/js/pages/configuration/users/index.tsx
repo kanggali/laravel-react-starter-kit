@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { HelpCircle, Plus, Search } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/ui/confirm-modal';
@@ -22,44 +21,44 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
-import MenuFormModal from './form';
+import UserFormModal from './form';
 
-interface MenuData {
+interface UserData {
     id: number;
     name: string;
-    url: string;
-    category: string;
-    icon: string;
-    main_menu_id?: number | null;
-    sub_menus?: MenuData[];
+    username: string;
+    email: string;
+    roles: { id: number; name: string }[];
 }
 
 interface PaginationProps {
-    data: MenuData[];
+    data: UserData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
     to: number;
 }
 
-export default function MenuIndex({
-    menus,
+export default function UserIndex({
+    users,
+    allRoles,
     filters,
 }: {
-    menus: PaginationProps;
+    users: PaginationProps;
+    allRoles: { id: number; name: string }[];
     filters: any;
 }) {
-    const confirm = useConfirm<MenuData>();
+    const confirm = useConfirm<UserData>();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<any>(null);
+    const [editData, setEditData] = useState<UserData | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
-    const { can } = usePermission();
     const [isReadOnly, setIsReadOnly] = useState(false);
 
-    const parentMenus = menus.data.map((m) => ({ id: m.id, name: m.name }));
+    const { can } = usePermission();
 
+    // Debounce search dan per_page
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             if (
@@ -67,7 +66,7 @@ export default function MenuIndex({
                 perPage !== (filters.per_page || '10')
             ) {
                 router.get(
-                    route('configuration.menu.index'),
+                    route('configuration.users.index'),
                     { search: searchTerm, per_page: perPage, page: 1 },
                     {
                         preserveState: true,
@@ -83,11 +82,12 @@ export default function MenuIndex({
 
     const handleAdd = () => {
         setEditData(null);
+        setIsReadOnly(true);
         setIsModalOpen(true);
     };
 
-    const handleEdit = (menu: any, mode: boolean = true) => {
-        setEditData(menu);
+    const handleEdit = (user: UserData, mode: boolean = false) => {
+        setEditData(user);
         setIsReadOnly(mode);
         setIsModalOpen(true);
     };
@@ -98,7 +98,7 @@ export default function MenuIndex({
         }
 
         setIsDeleting(true);
-        router.delete(route('configuration.menu.destroy', confirm.data?.id), {
+        router.delete(route('configuration.users.destroy', confirm.data.id), {
             preserveScroll: true,
             onSuccess: () => {
                 confirm.close();
@@ -110,21 +110,21 @@ export default function MenuIndex({
 
     return (
         <>
-            <Head title="Menu Management" />
+            <Head title="User Management" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">
-                            Menu Management
+                            User Management
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Kelola hierarki menu navigasi sistem.
+                            Kelola data pengguna dan akses peran mereka.
                         </p>
                     </div>
-                    {can('create configuration/menu') && (
+                    {can('create configuration/users') && (
                         <Button onClick={handleAdd}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Menu
+                            <Plus className="mr-2 h-4 w-4" /> Add User
                         </Button>
                     )}
                 </div>
@@ -134,7 +134,7 @@ export default function MenuIndex({
                         <div className="relative flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search menu..."
+                                placeholder="Search user..."
                                 className="pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -153,7 +153,7 @@ export default function MenuIndex({
                         </select>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                        Showing {menus.from}-{menus.to} of {menus.total}
+                        Showing {users.from}-{users.to} of {users.total}
                     </div>
                 </div>
 
@@ -161,82 +161,50 @@ export default function MenuIndex({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-12">Icon</TableHead>
-                                <TableHead>Menu Name</TableHead>
-                                <TableHead>URL</TableHead>
-                                <TableHead>Category</TableHead>
+                                <TableHead className="w-12">#</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Roles</TableHead>
                                 <TableHead className="text-right">
                                     Actions
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {menus.data.length > 0 ? (
-                                menus.data.map((menu) => (
-                                    <React.Fragment key={menu.id}>
-                                        <TableRow className="bg-muted/30 font-medium">
-                                            <TableCell>
-                                                <IconRenderer
-                                                    iconName={menu.icon}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{menu.name}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                /{menu.url}
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold">
-                                                    {menu.category}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <TableAction
-                                                    onEdit={(mode) =>
-                                                        handleEdit(menu, mode)
-                                                    }
-                                                    onDelete={() =>
-                                                        confirm.open(menu)
-                                                    }
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-
-                                        {menu.sub_menus?.map((sub) => (
-                                            <TableRow
-                                                key={sub.id}
-                                                className="hover:bg-muted/10"
-                                            >
-                                                <TableCell className="text-center opacity-40">
-                                                    <IconRenderer
-                                                        iconName={sub.icon}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="pl-10 text-sm text-muted-foreground">
-                                                    {sub.name}
-                                                </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
-                                                    /{sub.url}
-                                                </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
-                                                    {sub.category}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <TableAction
-                                                        route="configuration/menu"
-                                                        onEdit={(mode) =>
-                                                            handleEdit(
-                                                                sub,
-                                                                mode,
-                                                            )
-                                                        }
-                                                        onDelete={() =>
-                                                            confirm.open(sub)
-                                                        }
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </React.Fragment>
+                            {users.data.length > 0 ? (
+                                users.data.map((user, idx) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell>
+                                            {users.from + idx}
+                                        </TableCell>
+                                        <TableCell className="font-medium uppercase">
+                                            {user.name}
+                                        </TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.roles.map((role) => (
+                                                    <span
+                                                        key={role.id}
+                                                        className="inline-flex items-center rounded bg-cyan-400 px-2 py-0.5 text-[10px] font-bold text-white uppercase"
+                                                    >
+                                                        {role.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <TableAction
+                                                route="configuration/users"
+                                                onEdit={(mode) =>
+                                                    handleEdit(user, mode)
+                                                }
+                                                onDelete={() =>
+                                                    confirm.open(user)
+                                                }
+                                            />
+                                        </TableCell>
+                                    </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
@@ -244,7 +212,7 @@ export default function MenuIndex({
                                         colSpan={5}
                                         className="h-24 text-center"
                                     >
-                                        No results found.
+                                        No users found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -255,7 +223,7 @@ export default function MenuIndex({
                 <div className="mt-4 flex justify-center">
                     <Pagination>
                         <PaginationContent>
-                            {menus.links.map((link, i) => (
+                            {users.links.map((link, i) => (
                                 <PaginationItem key={i}>
                                     <Button
                                         variant={
@@ -277,11 +245,11 @@ export default function MenuIndex({
                 </div>
             </div>
 
-            <MenuFormModal
+            <UserFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                editData={editData}
-                parentMenus={parentMenus}
+                editUser={editData}
+                allRoles={allRoles}
                 isReadOnly={isReadOnly}
             />
 
@@ -290,25 +258,14 @@ export default function MenuIndex({
                 onClose={confirm.close}
                 onConfirm={handleConfirmDelete}
                 loading={isDeleting}
-                title="Hapus Menu"
+                title="Hapus User"
                 description={
                     <span>
-                        Apakah anda yakin akan menghapus data{' '}
+                        Apakah anda yakin akan menghapus data pengguna{' '}
                         <strong>"{confirm.data?.name}"</strong>. Lanjutkan?
                     </span>
                 }
             />
         </>
-    );
-}
-
-function IconRenderer({ iconName }: { iconName: string }) {
-    const icons = LucideIcons as unknown as Record<string, React.ElementType>;
-    const Icon = icons[iconName];
-
-    return Icon ? (
-        <Icon className="size-4" />
-    ) : (
-        <HelpCircle className="size-4 text-muted-foreground/50" />
     );
 }

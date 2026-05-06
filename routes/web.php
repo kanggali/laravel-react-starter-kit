@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Configuration\AccessRoleController;
+use App\Http\Controllers\Configuration\AccessUserController;
 use App\Http\Controllers\Configuration\MenuController;
 use App\Http\Controllers\Configuration\PermissionController;
 use App\Http\Controllers\Configuration\RoleController;
+use App\Http\Controllers\Configuration\UserController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -19,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('roles', RoleController::class);
         Route::resource('permissions', PermissionController::class);
         Route::resource('access-role', AccessRoleController::class)->except(['create', 'store', 'delete'])->parameters(['access-role' => 'role']);
+        Route::resource('access-user', AccessUserController::class)->except(['create', 'store', 'delete'])->parameters(['access-user' => 'user']);
+        Route::resource('users', UserController::class);
     });
 });
 

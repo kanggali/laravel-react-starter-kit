@@ -13,12 +13,7 @@ use Inertia\Inertia;
 class RoleController extends Controller
 {
 
-    protected RoleService $roleService;
-
-    public function __construct(RoleService $roleService)
-    {
-        $this->roleService = $roleService;
-    }
+    public function __construct(protected RoleService $roleService) {}
     /**
      * Display a listing of the resource.
      */
@@ -79,11 +74,7 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        try {
-            $this->roleService->deleteRole($role);
-            return back()->with('success', 'Role updated successfully.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
-        }
+        $this->roleService->delete($role);
+        return back()->with('success', 'Role updated successfully.');
     }
 }

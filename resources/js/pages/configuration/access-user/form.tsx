@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Search } from 'lucide-react';
 import React, { useEffect, useState, useMemo } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -20,23 +21,28 @@ interface MenuWithPermissions {
     permissions: Permission[];
 }
 
-interface RoleData {
+interface Role {
     id: number;
     name: string;
-    guard_name: string;
+}
+
+interface UserData {
+    id: number;
+    name: string;
+    email: string;
+    roles: Role[];
     permission_ids: number[];
 }
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    role: RoleData | null;
+    user: UserData | null;
     allMenus: MenuWithPermissions[];
-    allRoles: RoleData[];
+    allUsers: UserData[];
     isReadOnly: boolean;
 }
 
-// Helper untuk mengurutkan aksi: READ, CREATE, UPDATE, DELETE, lalu sisanya
 const sortPermissions = (permissions: Permission[]) => {
     const priority = ['read', 'create', 'update', 'delete'];
 
@@ -60,12 +66,12 @@ const sortPermissions = (permissions: Permission[]) => {
     });
 };
 
-export default function AccessRoleFormModal({
+export default function AccessUserFormModal({
     isOpen,
     onClose,
-    role,
+    user,
     allMenus,
-    allRoles,
+    allUsers,
     isReadOnly,
 }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
@@ -75,24 +81,20 @@ export default function AccessRoleFormModal({
     });
 
     useEffect(() => {
-        if (role && isOpen) {
-            setData('permission_ids', role.permission_ids || []);
-        } else {
+        if (user && isOpen) {
+            setData('permission_ids', user.permission_ids || []);
+        } else if (!isOpen) {
             reset();
         }
-    }, [role, isOpen, reset, setData]);
+    }, [user, isOpen, setData, reset]);
 
-    const handleCopyFromRole = (selectedRoleId: string) => {
-        if (!selectedRoleId) {
-            return;
-        }
-
-        const selectedRole = allRoles.find(
-            (r) => r.id === parseInt(selectedRoleId),
+    const handleCopyFromUser = (selectedUserId: string) => {
+        const selectedUser = allUsers.find(
+            (u) => u.id === parseInt(selectedUserId),
         );
 
-        if (selectedRole) {
-            setData('permission_ids', [...(selectedRole.permission_ids || [])]);
+        if (selectedUser) {
+            setData('permission_ids', [...(selectedUser.permission_ids || [])]);
         }
     };
 
@@ -135,8 +137,8 @@ export default function AccessRoleFormModal({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (role && isReadOnly) {
-            put(route('configuration.access-role.update', role.id), {
+        if (user && isReadOnly) {
+            put(route('configuration.access-user.update', user.id), {
                 preserveScroll: true,
                 onSuccess: () => onClose(),
             });
@@ -147,44 +149,54 @@ export default function AccessRoleFormModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={
-                !isReadOnly
-                    ? `Detail Access Role: ${role?.name}`
-                    : `Edit Access Role: ${role?.name}`
-            }
-            maxWidth="4xl" // Diubah ke 4xl agar lebih lega untuk banyak switch
+            title={isReadOnly ? 'Detail Access User' : 'Edit Access User'}
+            maxWidth="4xl"
         >
-            {/* Wrapper flex-col dan max-height agar footer tetap di bawah */}
             <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
                 <div className="flex-1 overflow-y-auto px-1">
-                    <fieldset disabled={!isReadOnly} className="space-y-6">
+                    <fieldset disabled={isReadOnly} className="space-y-6">
                         <div className="space-y-6 pb-4">
-                            {/* Area Filter */}
-                            <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                        Copy from role
-                                    </Label>
-                                    <select
-                                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring"
-                                        onChange={(e) =>
-                                            handleCopyFromRole(e.target.value)
-                                        }
-                                        value=""
-                                    >
-                                        <option value="" disabled>
-                                            Choose Role to Copy
-                                        </option>
-                                        {allRoles
-                                            .filter((r) => r.id !== role?.id)
-                                            .map((r) => (
-                                                <option key={r.id} value={r.id}>
-                                                    {r.name}
-                                                </option>
-                                            ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
+                            {/* Header Nama User sesuai Gambar 2 */}
+                            <h2 className="mt-2 text-xl font-bold text-[#2e59d9] uppercase">
+                                User: {user?.name}
+                            </h2>
+
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {!isReadOnly && (
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                                            Copy from user
+                                        </Label>
+                                        <select
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none"
+                                            onChange={(e) =>
+                                                handleCopyFromUser(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            value=""
+                                        >
+                                            <option value="" disabled>
+                                                Choose User to Copy
+                                            </option>
+                                            {allUsers
+                                                .filter(
+                                                    (u) => u.id !== user?.id,
+                                                )
+                                                .map((u) => (
+                                                    <option
+                                                        key={u.id}
+                                                        value={u.id}
+                                                    >
+                                                        {u.name}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <div
+                                    className={`space-y-2 ${isReadOnly ? 'md:col-span-2' : ''}`}
+                                >
                                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                         Search Menu
                                     </Label>
@@ -202,7 +214,6 @@ export default function AccessRoleFormModal({
                                 </div>
                             </div>
 
-                            {/* Tabel Matriks */}
                             <div className="overflow-hidden rounded-md border">
                                 <table className="w-full text-sm">
                                     <thead className="border-b bg-muted/50">
@@ -217,22 +228,13 @@ export default function AccessRoleFormModal({
                                     </thead>
                                     <tbody className="divide-y divide-muted-foreground/10">
                                         {filteredMenus.map((menu) => {
-                                            const rowPermIds =
-                                                menu.permissions.map(
-                                                    (p) => p.id,
-                                                );
                                             const isRowChecked =
-                                                rowPermIds.length > 0 &&
-                                                rowPermIds.every((id) =>
+                                                menu.permissions.length > 0 &&
+                                                menu.permissions.every((p) =>
                                                     data.permission_ids.includes(
-                                                        id,
+                                                        p.id,
                                                     ),
                                                 );
-
-                                            // Sort permissions sebelum render
-                                            const sortedPerms = sortPermissions(
-                                                menu.permissions,
-                                            );
 
                                             return (
                                                 <tr
@@ -261,8 +263,8 @@ export default function AccessRoleFormModal({
                                                             <span
                                                                 className={
                                                                     !menu.main_menu_id
-                                                                        ? 'text-sm font-bold'
-                                                                        : 'pl-4 text-sm text-muted-foreground'
+                                                                        ? 'font-bold'
+                                                                        : 'pl-4 text-muted-foreground'
                                                                 }
                                                             >
                                                                 {menu.name}
@@ -271,36 +273,36 @@ export default function AccessRoleFormModal({
                                                     </td>
                                                     <td className="p-3">
                                                         <div className="flex flex-wrap gap-x-8 gap-y-4">
-                                                            {sortedPerms.map(
-                                                                (perm) => (
-                                                                    <div
-                                                                        key={
-                                                                            perm.id
-                                                                        }
-                                                                        className="flex min-w-20 items-center gap-2"
-                                                                    >
-                                                                        <Switch
-                                                                            id={`perm-${perm.id}`}
-                                                                            checked={data.permission_ids.includes(
+                                                            {sortPermissions(
+                                                                menu.permissions,
+                                                            ).map((perm) => (
+                                                                <div
+                                                                    key={
+                                                                        perm.id
+                                                                    }
+                                                                    className="flex min-w-20 items-center gap-2"
+                                                                >
+                                                                    <Switch
+                                                                        id={`perm-${perm.id}`}
+                                                                        checked={data.permission_ids.includes(
+                                                                            perm.id,
+                                                                        )}
+                                                                        onCheckedChange={() =>
+                                                                            handleTogglePermission(
                                                                                 perm.id,
-                                                                            )}
-                                                                            onCheckedChange={() =>
-                                                                                handleTogglePermission(
-                                                                                    perm.id,
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <Label
-                                                                            htmlFor={`perm-${perm.id}`}
-                                                                            className="cursor-pointer text-[10px] font-extrabold tracking-widest text-muted-foreground uppercase"
-                                                                        >
-                                                                            {
-                                                                                perm.action_name
-                                                                            }
-                                                                        </Label>
-                                                                    </div>
-                                                                ),
-                                                            )}
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <Label
+                                                                        htmlFor={`perm-${perm.id}`}
+                                                                        className="cursor-pointer text-[10px] font-extrabold tracking-widest text-muted-foreground uppercase"
+                                                                    >
+                                                                        {
+                                                                            perm.action_name
+                                                                        }
+                                                                    </Label>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -312,17 +314,13 @@ export default function AccessRoleFormModal({
                         </div>
                     </fieldset>
                 </div>
-                {/* Footer Tetap di Bawah */}
+
                 <div className="mt-4 flex justify-end gap-3 border-t pt-4">
                     <Button type="button" variant="outline" onClick={onClose}>
-                        Cancel
+                        {isReadOnly ? 'Close' : 'Cancel'}
                     </Button>
-                    {isReadOnly && (
-                        <Button
-                            type="submit"
-                            disabled={processing}
-                            className="min-w-30"
-                        >
+                    {!isReadOnly && (
+                        <Button type="submit" disabled={processing}>
                             {processing ? 'Saving...' : 'Save Changes'}
                         </Button>
                     )}

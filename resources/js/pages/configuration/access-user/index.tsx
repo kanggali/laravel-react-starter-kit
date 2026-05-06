@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,36 +19,42 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import TableAction from '@/components/ui/table-action';
-import AccessRoleFormModal from './form';
+import AccessUserFormModal from './form';
 
-interface RoleData {
+interface Role {
     id: number;
     name: string;
-    guard_name: string;
+}
+
+interface UserData {
+    id: number;
+    name: string;
+    email: string;
+    roles: Role[];
     permission_ids: number[];
 }
 
 interface PaginationProps {
-    data: RoleData[];
+    data: UserData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
     to: number;
 }
 
-export default function AccessRoleIndex({
-    roles,
+export default function AccessUserIndex({
+    users,
     filters,
     allMenus,
-    allRoles,
+    allUsers,
 }: {
-    roles: PaginationProps;
+    users: PaginationProps;
     filters: any;
     allMenus: any[];
-    allRoles: any[];
+    allUsers: any[];
 }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<RoleData | null>(null);
+    const [editData, setEditData] = useState<UserData | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isReadOnly, setIsReadOnly] = useState(false);
@@ -60,7 +67,7 @@ export default function AccessRoleIndex({
                 perPage !== (filters.per_page || '10')
             ) {
                 router.get(
-                    route('configuration.access-role.index'),
+                    route('configuration.access-user.index'),
                     {
                         search: searchTerm,
                         per_page: perPage,
@@ -78,28 +85,28 @@ export default function AccessRoleIndex({
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
 
-    const handleEdit = (role: RoleData, mode: boolean = true) => {
-        setEditData(role);
+    const handleEdit = (user: UserData, mode: boolean = true) => {
+        setEditData(user);
         setIsReadOnly(mode);
         setIsModalOpen(true);
     };
 
     return (
         <>
-            <Head title="Access Role" />
+            <Head title="Access User" />
 
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold tracking-tight">
-                            Access Role
+                            Access User
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Manajemen hak akses role terhadap menu dan aksi
+                            Manajemen hak akses user terhadap menu dan aksi
                             sistem.
                         </p>
                     </div>
-                    {/* Tombol Add Role Dihilangkan sesuai permintaan */}
+                    {/* Tombol Add User Dihilangkan sesuai permintaan */}
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
@@ -107,7 +114,7 @@ export default function AccessRoleIndex({
                         <div className="relative flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search role..."
+                                placeholder="Search user..."
                                 className="pl-8"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -126,8 +133,8 @@ export default function AccessRoleIndex({
                         </select>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                        Showing <strong>{roles.from ?? 0}</strong> to{' '}
-                        <strong>{roles.to ?? 0}</strong> of {roles.total}
+                        Showing <strong>{users.from ?? 0}</strong> to{' '}
+                        <strong>{users.to ?? 0}</strong> of {users.total}
                     </div>
                 </div>
 
@@ -137,30 +144,41 @@ export default function AccessRoleIndex({
                             <TableRow>
                                 <TableHead className="w-12">No</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Guard Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Roles</TableHead>
                                 <TableHead className="w-24 text-right">
                                     Action
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {roles.data.length > 0 ? (
-                                roles.data.map((role, index) => (
-                                    <TableRow key={role.id}>
+                            {users.data.length > 0 ? (
+                                users.data.map((user, index) => (
+                                    <TableRow key={user.id}>
                                         <TableCell>
-                                            {roles.from + index}
+                                            {users.from + index}
                                         </TableCell>
-                                        <TableCell className="font-medium">
-                                            {role.name}
+                                        <TableCell className="font-bold uppercase">
+                                            {user.name}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            {role.guard_name}
+                                            {user.email}
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.roles.map((role) => (
+                                                <Badge
+                                                    key={role.id}
+                                                    className="border-none bg-cyan-500 text-white hover:bg-cyan-600"
+                                                >
+                                                    {role.name}
+                                                </Badge>
+                                            ))}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                route="configuration/access-role"
+                                                route="configuration/access-user" // Sesuaikan route permission
                                                 onEdit={(mode) =>
-                                                    handleEdit(role, mode)
+                                                    handleEdit(user, mode)
                                                 }
                                             />
                                         </TableCell>
@@ -183,7 +201,7 @@ export default function AccessRoleIndex({
                 <div className="mt-4 flex justify-center">
                     <Pagination>
                         <PaginationContent>
-                            {roles.links.map((link, i) => (
+                            {users.links.map((link, i) => (
                                 <PaginationItem key={i}>
                                     <Button
                                         variant={
@@ -206,12 +224,12 @@ export default function AccessRoleIndex({
             </div>
 
             {/* Modal Form Matriks sesuai Gambar 2 */}
-            <AccessRoleFormModal
+            <AccessUserFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                role={editData}
+                user={editData}
                 allMenus={allMenus}
-                allRoles={allRoles}
+                allUsers={allUsers}
                 isReadOnly={isReadOnly}
             />
         </>

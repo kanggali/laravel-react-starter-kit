@@ -16,9 +16,15 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     editData: PermissionData | null;
+    isReadOnly: boolean;
 }
 
-export default function MenuFormModal({ isOpen, onClose, editData }: Props) {
+export default function MenuFormModal({
+    isOpen,
+    onClose,
+    editData,
+    isReadOnly,
+}: Props) {
     const { data, setData, post, put, processing, errors, reset, clearErrors } =
         useForm({
             id: null as number | null,
@@ -61,43 +67,55 @@ export default function MenuFormModal({ isOpen, onClose, editData }: Props) {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={data.id ? 'Edit Permission' : 'Add New Permission'}
+            title={
+                !isReadOnly
+                    ? `Detail Permission`
+                    : data?.id
+                      ? 'Edit Permission'
+                      : 'Add New Permission'
+            }
             maxWidth="md"
         >
             <form onSubmit={submit} className="space-y-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="name">Permission Name</Label>
-                    <Input
-                        id="name"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        placeholder="e.g. Administrator"
-                        autoFocus
-                    />
-                    <InputError message={errors.name} />
-                </div>
+                <fieldset disabled={!isReadOnly} className="space-y-6">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Permission Name</Label>
+                        <Input
+                            id="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            placeholder="e.g. Administrator"
+                            autoFocus
+                        />
+                        <InputError message={errors.name} />
+                    </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="guard_name">Guard Name</Label>
-                    <Input
-                        id="guard_name"
-                        value={data.guard_name}
-                        onChange={(e) => setData('guard_name', e.target.value)}
-                    />
-                    <InputError message={errors.guard_name} />
-                </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="guard_name">Guard Name</Label>
+                        <Input
+                            id="guard_name"
+                            value={data.guard_name}
+                            onChange={(e) =>
+                                setData('guard_name', e.target.value)
+                            }
+                        />
+                        <InputError message={errors.guard_name} />
+                    </div>
+                </fieldset>
 
                 <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={processing}>
-                        {processing
-                            ? 'Saving...'
-                            : data.id
-                              ? 'Update Permission'
-                              : 'Save Permission'}
-                    </Button>
+                    {isReadOnly && (
+                        <Button type="submit" disabled={processing}>
+                            {processing
+                                ? 'Saving...'
+                                : data.id
+                                  ? 'Update Permission'
+                                  : 'Save Permission'}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Modal>

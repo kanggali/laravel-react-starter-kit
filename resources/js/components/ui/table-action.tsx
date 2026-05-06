@@ -1,4 +1,3 @@
-import React from 'react';
 import { Edit, Trash2, ChevronDown, Eye } from 'lucide-react';
 import {
     DropdownMenu,
@@ -11,28 +10,24 @@ import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/use-permission';
 
 interface TableActionProps {
-    onEdit?: () => void;
+    onEdit?: (mode: boolean) => void;
     onDelete?: () => void;
     onDetail?: () => void;
     className?: string;
-    permissionEdit?: string;
-    permissionDelete?: string;
+    route?: string;
 }
 
 export default function TableAction({
     onEdit,
     onDelete,
-    onDetail,
     className = "",
-    permissionEdit,
-    permissionDelete
+    route,
 }: TableActionProps) {
     const { can } = usePermission();
 
-    const canEdit = onEdit && (!permissionEdit || can(permissionEdit));
-    const canDelete = onDelete && (!permissionDelete || can(permissionDelete));
-
-    if (!onDetail && !canEdit && !canDelete) return null;
+    const canDetail =  !route || can(`read ${route}`);
+    const canEdit = onEdit && (!route || can(`update ${route}`));
+    const canDelete = onDelete && (!route || can(`delete ${route}`));
 
     return (
         <DropdownMenu>
@@ -42,14 +37,14 @@ export default function TableAction({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-                {onDetail && (
-                    <DropdownMenuItem onClick={onDetail} className="cursor-pointer">
+                {canDetail && (
+                    <DropdownMenuItem onClick={()=>onEdit?.(false)} className="cursor-pointer">
                         <Eye className="mr-2 h-4 w-4" /> Detail
                     </DropdownMenuItem>
                 )}
 
                 {canEdit && (
-                    <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
+                    <DropdownMenuItem onClick={()=>onEdit?.(true)} className="cursor-pointer">
                         <Edit className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
                 )}

@@ -133,11 +133,144 @@
 }
 
 @layer base {
-    * {
-        @apply border-border;
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground; }
+
+    /* 1. Container Utama */
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid var(--border) !important;
+        background: transparent !important;
+        min-height: 2.25rem !important;
+        width: 100% !important;
+        border-radius: var(--radius) !important;
+        padding: 0.25rem 0.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 0.25rem !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 
-    body {
-        @apply bg-background text-foreground;
+    /* 2. State Focus */
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: var(--ring) !important;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent) !important;
+    }
+
+    /* 3. Pill/Tag — PERBAIKAN UTAMA */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: var(--primary) !important;
+        color: var(--primary-foreground) !important;
+        border: none !important;
+        border-radius: calc(var(--radius) - 6px) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.2rem !important;
+        margin: 0 !important;
+        padding: 0.1rem 0.4rem 0.1rem 0.25rem !important;
+        /* JANGAN set height fixed — pakai padding saja */
+        height: auto !important;
+        line-height: normal !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        /* Reset posisi */
+        position: relative !important;
+        float: none !important;
+    }
+
+    /* 4. Teks Label di Dalam Pill */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        color: inherit !important;
+        font-size: inherit !important;
+    }
+
+    /* 5. Tombol × — PERBAIKAN: reset position dan ukuran */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 14px !important;
+        height: 14px !important;
+        position: static !important; /* override position:relative bawaan */
+        color: color-mix(in srgb, var(--primary-foreground) 60%, transparent) !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        border-radius: 2px !important;
+        transition: color 150ms, background 150ms !important;
+        flex-shrink: 0 !important;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        color: var(--primary-foreground) !important;
+        background: color-mix(in srgb, var(--primary-foreground) 15%, transparent) !important;
+    }
+
+    /* Ikon × di dalam button */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove span {
+        font-size: 14px !important;
+        line-height: 1 !important;
+        display: block !important;
+    }
+
+    /* 6. Input Pencarian Internal */
+    .select2-container--default .select2-search--inline {
+        margin: 0 !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        flex: 1 !important;
+    }
+
+    .select2-container--default .select2-search--inline .select2-search__field {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 1.75rem !important;
+        background: transparent !important;
+        outline: none !important;
+        font-size: 0.875rem !important;
+        min-width: 60px !important;
+    }
+
+    /* 7. Dropdown */
+    .select2-dropdown {
+        z-index: 9999 !important;
+        overflow: hidden !important;
+        border-radius: var(--radius) !important;
+        border: 1px solid var(--border) !important;
+        background: var(--popover) !important;
+        color: var(--popover-foreground) !important;
+        box-shadow: 0 4px 12px oklch(0 0 0 / 0.08) !important;
+        margin-top: 0.25rem !important;
+    }
+
+    .select2-container--default .select2-results__option {
+        padding: 0.375rem 0.5rem !important;
+        font-size: 0.875rem !important;
+        cursor: pointer !important;
+    }
+
+    /* 8. Hover Dropdown */
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background: var(--accent) !important;
+        color: var(--accent-foreground) !important;
+    }
+
+    /* 9. Reset ul container dalam selection */
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        list-style: none !important;
+        width: 100% !important;
     }
 }

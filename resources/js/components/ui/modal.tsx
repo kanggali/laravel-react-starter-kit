@@ -6,6 +6,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/components/ui/dialog';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { cn } from '@/lib/utils';
 
 interface ModalProps {
@@ -37,16 +38,43 @@ export default function Modal({
 }: ModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className={cn(
-                "overflow-hidden",
-                maxWidthClass[maxWidth]
-            )}>
-                {(title || description) && (
-                    <DialogHeader>
-                        {title && <DialogTitle className={cn(!description && "text-center")}>{title}</DialogTitle>}
-                        {description && <DialogDescription className="text-center">{description}</DialogDescription>}
-                    </DialogHeader>
+            <DialogContent
+                className={cn(
+                    "overflow-hidden",
+                    maxWidthClass[maxWidth]
                 )}
+                aria-describedby={description ? undefined : Array.isArray(description) ? undefined : undefined}
+                onPointerDownOutside={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target?.closest('.select2-container') || target?.closest('.select2-search__field')) {
+                        e.preventDefault();
+                    }
+                }}
+            >
+                <DialogHeader>
+                    {title ? (
+                        <DialogTitle className={cn(!description && "text-center")}>
+                            {title}
+                        </DialogTitle>
+                    ) : (
+                        <VisuallyHidden.Root>
+                            <DialogTitle>Modal Dialog</DialogTitle>
+                        </VisuallyHidden.Root>
+                    )}
+
+                    {description ? (
+                        <DialogDescription className="text-center">
+                            {description}
+                        </DialogDescription>
+                    ) : (
+                        <VisuallyHidden.Root>
+                            <DialogDescription>
+                                Description for the modal dialog.
+                            </DialogDescription>
+                        </VisuallyHidden.Root>
+                    )}
+                </DialogHeader>
+
                 <div className="w-full">
                     {children}
                 </div>

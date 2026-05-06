@@ -53,6 +53,7 @@ export default function PermissionIndex({
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
     const { can } = usePermission();
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -80,8 +81,9 @@ export default function PermissionIndex({
         setIsModalOpen(true);
     };
 
-    const handleEdit = (permission: any) => {
+    const handleEdit = (permission: any, mode: boolean = true) => {
         setEditData(permission);
+        setIsReadOnly(mode);
         setIsModalOpen(true);
     };
 
@@ -182,11 +184,10 @@ export default function PermissionIndex({
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                permissionEdit="update configuration/permissions"
-                                                onEdit={() =>
-                                                    handleEdit(permission)
+                                                route="configuration/permissions"
+                                                onEdit={(mode) =>
+                                                    handleEdit(permission, mode)
                                                 }
-                                                permissionDelete="delete configuration/permissions"
                                                 onDelete={() =>
                                                     confirm.open(permission)
                                                 }
@@ -237,6 +238,7 @@ export default function PermissionIndex({
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 editData={editData}
+                isReadOnly={isReadOnly}
             />
 
             <ConfirmModal

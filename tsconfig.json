@@ -113,7 +113,9 @@
         "paths": {
             "@/*": ["./resources/js/*"]
         },
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "allowSyntheticDefaultImports": true,
+        "types": ["jquery", "select2"]
     },
     "include": [
         "resources/js/**/*.ts",

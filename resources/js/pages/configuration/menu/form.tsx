@@ -20,6 +20,7 @@ interface Props {
     onClose: () => void;
     editData: MenuData | null;
     parentMenus: { id: number; name: string }[];
+    isReadOnly: boolean;
 }
 
 export default function MenuFormModal({
@@ -27,6 +28,7 @@ export default function MenuFormModal({
     onClose,
     editData,
     parentMenus,
+    isReadOnly,
 }: Props) {
     // Inisialisasi form dengan default values
     const { data, setData, post, put, processing, errors, reset, clearErrors } =
@@ -77,96 +79,110 @@ export default function MenuFormModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={data.id ? 'Edit Menu' : 'Add New Menu'}
+            title={
+                !isReadOnly
+                    ? `Detail Role`
+                    : data?.id
+                      ? 'Edit Role'
+                      : 'Add New Role'
+            }
             maxWidth="md"
         >
             <form onSubmit={submit} className="space-y-4">
-                {/* Pemilihan Parent Menu (Dinamis) */}
-                <div className="grid gap-2">
-                    <Label htmlFor="main_menu_id">Parent Menu (Optional)</Label>
-                    <select
-                        id="main_menu_id"
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-1 focus:ring-ring"
-                        value={data.main_menu_id ?? ''}
-                        onChange={(e) =>
-                            setData(
-                                'main_menu_id',
-                                e.target.value
-                                    ? parseInt(e.target.value)
-                                    : null,
-                            )
-                        }
-                    >
-                        <option value="">-- No Parent (Main Menu) --</option>
-                        {parentMenus.map((p) => (
-                            <option key={p.id} value={p.id}>
-                                {p.name}
-                            </option>
-                        ))}
-                    </select>
-                    <p className="text-[10px] text-muted-foreground">
-                        Pilih jika ingin menjadikan ini sebagai submenu.
-                    </p>
-                </div>
-
-                {/* Input Nama Menu */}
-                <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                        id="name"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        placeholder="e.g. User Management"
-                    />
-                    <InputError message={errors.name} />
-                </div>
-
-                {/* Input URL Path */}
-                <div className="grid gap-2">
-                    <Label htmlFor="url">URL Path</Label>
-                    <Input
-                        id="url"
-                        value={data.url}
-                        onChange={(e) => setData('url', e.target.value)}
-                        placeholder="configuration/users"
-                    />
-                    <InputError message={errors.url} />
-                </div>
-
-                {/* Baris Kategori & Icon */}
-                <div className="grid grid-cols-2 gap-4">
+                <fieldset disabled={!isReadOnly} className="space-y-6">
                     <div className="grid gap-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Input
-                            id="category"
-                            value={data.category}
+                        <Label htmlFor="main_menu_id">
+                            Parent Menu (Optional)
+                        </Label>
+                        <select
+                            id="main_menu_id"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-1 focus:ring-ring"
+                            value={data.main_menu_id ?? ''}
                             onChange={(e) =>
-                                setData('category', e.target.value)
+                                setData(
+                                    'main_menu_id',
+                                    e.target.value
+                                        ? parseInt(e.target.value)
+                                        : null,
+                                )
                             }
-                            placeholder="MANAGEMENT"
-                        />
-                        <InputError message={errors.category} />
+                        >
+                            <option value="">
+                                -- No Parent (Main Menu) --
+                            </option>
+                            {parentMenus.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-[10px] text-muted-foreground">
+                            Pilih jika ingin menjadikan ini sebagai submenu.
+                        </p>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="icon">Icon Name</Label>
-                        <Input
-                            id="icon"
-                            value={data.icon}
-                            onChange={(e) => setData('icon', e.target.value)}
-                            placeholder="Settings atau Users"
-                        />
-                        <InputError message={errors.icon} />
-                    </div>
-                </div>
 
+                    {/* Input Nama Menu */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                            id="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            placeholder="e.g. User Management"
+                        />
+                        <InputError message={errors.name} />
+                    </div>
+
+                    {/* Input URL Path */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="url">URL Path</Label>
+                        <Input
+                            id="url"
+                            value={data.url}
+                            onChange={(e) => setData('url', e.target.value)}
+                            placeholder="configuration/users"
+                        />
+                        <InputError message={errors.url} />
+                    </div>
+
+                    {/* Baris Kategori & Icon */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="category">Category</Label>
+                            <Input
+                                id="category"
+                                value={data.category}
+                                onChange={(e) =>
+                                    setData('category', e.target.value)
+                                }
+                                placeholder="MANAGEMENT"
+                            />
+                            <InputError message={errors.category} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="icon">Icon Name</Label>
+                            <Input
+                                id="icon"
+                                value={data.icon}
+                                onChange={(e) =>
+                                    setData('icon', e.target.value)
+                                }
+                                placeholder="Settings atau Users"
+                            />
+                            <InputError message={errors.icon} />
+                        </div>
+                    </div>
+                </fieldset>
                 {/* Footer Modal */}
                 <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={processing}>
-                        {data.id ? 'Update' : 'Save'}
-                    </Button>
+                    {isReadOnly && (
+                        <Button type="submit" disabled={processing}>
+                            {data.id ? 'Update' : 'Save'}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Modal>

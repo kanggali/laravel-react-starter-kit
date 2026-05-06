@@ -19,9 +19,19 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            // Data Two Factor Authentication
+            'twoFactorEnabled' => !is_null($user->two_factor_secret),
+            'twoFactorConfirmed' => !is_null($user->two_factor_confirmed_at),
+            'qrCodeSvg' => function () use ($user) {
+                return $user->two_factor_secret ? $user->twoFactorQrCodeSvg() : null;
+            },
+            'recoveryCodes' => function () use ($user) {
+                return $user->two_factor_secret ? decrypt($user->two_factor_recovery_codes) : [];
+            },
         ]);
     }
 

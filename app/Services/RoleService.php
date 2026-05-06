@@ -23,7 +23,7 @@ class RoleService
             ->withQueryString();
     }
 
-    public function deleteRole(Role $role)
+    public function delete(Role $role)
     {
         $protectedRoles = ['super-admin', 'admin'];
 

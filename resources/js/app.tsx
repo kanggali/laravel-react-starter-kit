@@ -1,6 +1,8 @@
 import '../css/app.css';
-
 import { createInertiaApp } from '@inertiajs/react';
+import $ from 'jquery';
+window.jQuery = window.$ = $;
+
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { route as ziggyRoute } from 'ziggy-js';

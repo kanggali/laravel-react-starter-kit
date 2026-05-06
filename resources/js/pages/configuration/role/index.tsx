@@ -52,6 +52,7 @@ export default function RoleIndex({
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     const { can } = usePermission();
 
@@ -78,11 +79,13 @@ export default function RoleIndex({
 
     const handleAdd = () => {
         setEditData(null);
+        setIsReadOnly(true);
         setIsModalOpen(true);
     };
 
-    const handleEdit = (role: any) => {
+    const handleEdit = (role: any, mode: boolean = true) => {
         setEditData(role);
+        setIsReadOnly(mode);
         setIsModalOpen(true);
     };
 
@@ -177,9 +180,10 @@ export default function RoleIndex({
                                         <TableCell>{role.guard_name}</TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                permissionEdit="update configuration/roles"
-                                                onEdit={() => handleEdit(role)}
-                                                permissionDelete="delete configuration/roles"
+                                                route="configuration/roles"
+                                                onEdit={(mode) =>
+                                                    handleEdit(role, mode)
+                                                }
                                                 onDelete={() =>
                                                     confirm.open(role)
                                                 }
@@ -230,6 +234,7 @@ export default function RoleIndex({
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 editData={editData}
+                isReadOnly={isReadOnly}
             />
 
             <ConfirmModal
