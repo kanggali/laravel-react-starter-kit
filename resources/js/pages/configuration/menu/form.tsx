@@ -1,71 +1,58 @@
-import { useForm } from '@inertiajs/react';
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
-
-interface MenuData {
-    id: number | null;
-    name: string;
-    url: string;
-    category: string;
-    icon: string;
-    main_menu_id: number | null;
-}
+import { ModalMode } from '@/types/enums';
+import { useMenuStore } from '@/stores/useMenuStore';
+import { useCrudForm } from '@/hooks/use-crud-form';
+import type { MenuData } from '@/types/auth';
 
 interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    editData: MenuData | null;
-    parentMenus: { id: number; name: string }[];
-    isReadOnly: boolean;
+    parentMenus: { id: number | null; name: string }[];
 }
 
-export default function MenuFormModal({
-    isOpen,
-    onClose,
-    editData,
-    parentMenus,
-    isReadOnly,
-}: Props) {
-    // Inisialisasi form dengan default values
-    const { data, setData, post, put, processing, errors, reset, clearErrors } =
-        useForm({
-            id: null as number | null,
-            name: '',
-            url: '',
-            category: 'MANAGEMENT',
-            icon: '',
-            main_menu_id: null as number | null,
+export default function MenuFormModal({ parentMenus }: Props) {
+    const { mode, editData, closeModal } = useMenuStore();
+
+    const transformMenuData = useCallback(
+        (menu: MenuData) => ({
+            id: menu.id,
+            name: menu.name,
+            url: menu.url,
+            category: menu.category,
+            icon: menu.icon,
+            main_menu_id: menu.main_menu_id ?? null,
+            active: menu.active,
+            orders: menu.orders ?? 0,
+        }),
+        [],
+    );
+
+    const { data, setData, post, put, processing, errors, isOpen, isReadOnly } =
+        useCrudForm<MenuData>({
+            mode,
+            editData,
+            initialValues: {
+                id: null as number | null,
+                name: '',
+                url: '',
+                category: 'MANAGEMENT',
+                icon: '',
+                main_menu_id: null as number | null,
+                active: true as boolean | number,
+                orders: 0,
+            },
+            transformData: transformMenuData,
         });
-
-    // Sinkronisasi data saat modal dibuka untuk Edit atau Add
-    useEffect(() => {
-        if (editData) {
-            setData({
-                id: editData.id,
-                name: editData.name,
-                url: editData.url,
-                category: editData.category,
-                icon: editData.icon,
-                main_menu_id: editData.main_menu_id ?? null,
-            });
-        } else {
-            reset();
-        }
-
-        clearErrors();
-    }, [editData, isOpen, setData, reset, clearErrors]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isReadOnly) return;
+
         const options = {
-            onSuccess: () => {
-                onClose();
-                reset();
-            },
+            onSuccess: () => closeModal(),
         };
 
         if (data.id) {
@@ -78,25 +65,22 @@ export default function MenuFormModal({
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={closeModal}
             title={
-                !isReadOnly
-                    ? `Detail Role`
-                    : data?.id
-                      ? 'Edit Role'
-                      : 'Add New Role'
+                mode === ModalMode.CREATE
+                    ? 'Add New Menu'
+                    : mode === ModalMode.EDIT
+                      ? 'Edit Menu'
+                      : 'Detail Menu'
             }
             maxWidth="md"
         >
             <form onSubmit={submit} className="space-y-4">
-                <fieldset disabled={!isReadOnly} className="space-y-6">
+                <fieldset disabled={isReadOnly} className="space-y-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="main_menu_id">
-                            Parent Menu (Optional)
-                        </Label>
+                        <Label>Parent Menu</Label>
                         <select
-                            id="main_menu_id"
-                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none focus:ring-1 focus:ring-ring"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring disabled:opacity-80"
                             value={data.main_menu_id ?? ''}
                             onChange={(e) =>
                                 setData(
@@ -107,80 +91,75 @@ export default function MenuFormModal({
                                 )
                             }
                         >
-                            <option value="">
-                                -- No Parent (Main Menu) --
-                            </option>
-                            {parentMenus.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name}
-                                </option>
-                            ))}
+                            <option value="">-- No Parent --</option>
+                            {parentMenus
+                                .filter((p) => p.id !== data.id)
+                                .map((p) => (
+                                    <option
+                                        key={p.id ?? `parent-${p.name}`}
+                                        value={p.id ?? ''}
+                                    >
+                                        {p.name}
+                                    </option>
+                                ))}
                         </select>
-                        <p className="text-[10px] text-muted-foreground">
-                            Pilih jika ingin menjadikan ini sebagai submenu.
-                        </p>
                     </div>
 
-                    {/* Input Nama Menu */}
                     <div className="grid gap-2">
                         <Label htmlFor="name">Name</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            placeholder="e.g. User Management"
                         />
                         <InputError message={errors.name} />
                     </div>
 
-                    {/* Input URL Path */}
                     <div className="grid gap-2">
                         <Label htmlFor="url">URL Path</Label>
                         <Input
                             id="url"
                             value={data.url}
                             onChange={(e) => setData('url', e.target.value)}
-                            placeholder="configuration/users"
                         />
                         <InputError message={errors.url} />
                     </div>
 
-                    {/* Baris Kategori & Icon */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="category">Category</Label>
+                            <Label>Category</Label>
                             <Input
-                                id="category"
                                 value={data.category}
                                 onChange={(e) =>
                                     setData('category', e.target.value)
                                 }
-                                placeholder="MANAGEMENT"
                             />
                             <InputError message={errors.category} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="icon">Icon Name</Label>
+                            <Label>Icon Name</Label>
                             <Input
-                                id="icon"
                                 value={data.icon}
                                 onChange={(e) =>
                                     setData('icon', e.target.value)
                                 }
-                                placeholder="Settings atau Users"
                             />
                             <InputError message={errors.icon} />
                         </div>
                     </div>
                 </fieldset>
-                {/* Footer Modal */}
-                <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Cancel
+
+                <div className="flex justify-end gap-3 border-t pt-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeModal}
+                    >
+                        {isReadOnly ? 'Close' : 'Cancel'}
                     </Button>
-                    {isReadOnly && (
+                    {!isReadOnly && (
                         <Button type="submit" disabled={processing}>
-                            {data.id ? 'Update' : 'Save'}
+                            {mode === ModalMode.CREATE ? 'Save' : 'Update'}
                         </Button>
                     )}
                 </div>

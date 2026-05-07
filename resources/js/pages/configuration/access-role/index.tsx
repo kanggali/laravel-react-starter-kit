@@ -18,17 +18,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import TableAction from '@/components/ui/table-action';
+import { useAccessRoleStore } from '@/stores/useAccessRoleStore';
+import type { AccessRoleData } from '@/types/auth';
 import AccessRoleFormModal from './form';
 
-interface RoleData {
-    id: number;
-    name: string;
-    guard_name: string;
-    permission_ids: number[];
-}
-
 interface PaginationProps {
-    data: RoleData[];
+    data: AccessRoleData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
@@ -44,45 +39,39 @@ export default function AccessRoleIndex({
     roles: PaginationProps;
     filters: any;
     allMenus: any[];
-    allRoles: any[];
+    allRoles: AccessRoleData[];
 }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<RoleData | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
-    const [isReadOnly, setIsReadOnly] = useState(false);
+
+    const { openEdit, openDetail } = useAccessRoleStore();
 
     useEffect(() => {
+        const isSearchChanged = searchTerm !== (filters.search || '');
+        const isPerPageChanged = perPage !== (filters.per_page || '10');
+
+        if (!isSearchChanged && !isPerPageChanged) {
+            return;
+        }
+
         const delayDebounceFn = setTimeout(() => {
-            // Pengecekan apakah nilai berubah sebelum melakukan request
-            if (
-                searchTerm !== (filters.search || '') ||
-                perPage !== (filters.per_page || '10')
-            ) {
-                router.get(
-                    route('configuration.access-role.index'),
-                    {
-                        search: searchTerm,
-                        per_page: perPage,
-                        page: 1,
-                    },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                    },
-                );
-            }
+            router.get(
+                route('configuration.access-role.index'),
+                {
+                    search: searchTerm,
+                    per_page: perPage,
+                    page: 1,
+                },
+                {
+                    preserveState: true,
+                    replace: true,
+                    preserveScroll: true,
+                },
+            );
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
-
-    const handleEdit = (role: RoleData, mode: boolean = true) => {
-        setEditData(role);
-        setIsReadOnly(mode);
-        setIsModalOpen(true);
-    };
 
     return (
         <>
@@ -99,12 +88,11 @@ export default function AccessRoleIndex({
                             sistem.
                         </p>
                     </div>
-                    {/* Tombol Add Role Dihilangkan sesuai permintaan */}
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex w-full max-w-sm items-center gap-3">
-                        <div className="relative flex-1">
+                        <div className="relative w-full flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search role..."
@@ -158,9 +146,10 @@ export default function AccessRoleIndex({
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                route="configuration/access-role"
-                                                onEdit={(mode) =>
-                                                    handleEdit(role, mode)
+                                                onEdit={(isEditMode) =>
+                                                    isEditMode
+                                                        ? openEdit(role)
+                                                        : openDetail(role)
                                                 }
                                             />
                                         </TableCell>
@@ -170,9 +159,9 @@ export default function AccessRoleIndex({
                                 <TableRow>
                                     <TableCell
                                         colSpan={4}
-                                        className="h-24 text-center"
+                                        className="h-24 text-center text-muted-foreground"
                                     >
-                                        No results.
+                                        No data found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -205,15 +194,7 @@ export default function AccessRoleIndex({
                 </div>
             </div>
 
-            {/* Modal Form Matriks sesuai Gambar 2 */}
-            <AccessRoleFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                role={editData}
-                allMenus={allMenus}
-                allRoles={allRoles}
-                isReadOnly={isReadOnly}
-            />
+            <AccessRoleFormModal allMenus={allMenus} allRoles={allRoles} />
         </>
     );
 }

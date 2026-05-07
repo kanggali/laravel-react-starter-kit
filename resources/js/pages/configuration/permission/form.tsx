@@ -1,90 +1,78 @@
-import { useForm } from '@inertiajs/react';
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
+import { useCrudForm } from '@/hooks/use-crud-form';
+import { usePermissionStore } from '@/stores/usePermissionStore';
+import { ModalMode } from '@/types/enums';
+import type { PermissionData } from '@/types/permission';
 
-interface PermissionData {
-    id: number | null;
-    name: string;
-    guard_name: string;
-}
+export default function PermissionFormModal() {
+    const { mode, editData, closeModal } = usePermissionStore();
 
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    editData: PermissionData | null;
-    isReadOnly: boolean;
-}
+    const transformPermissionData = useCallback(
+        (permission: PermissionData) => ({
+            id: permission.id,
+            name: permission.name,
+            guard_name: permission.guard_name,
+        }),
+        [],
+    );
 
-export default function MenuFormModal({
-    isOpen,
-    onClose,
-    editData,
-    isReadOnly,
-}: Props) {
-    const { data, setData, post, put, processing, errors, reset, clearErrors } =
-        useForm({
-            id: null as number | null,
-            name: '',
-            guard_name: 'web',
+    const { data, setData, post, put, processing, errors, isOpen, isReadOnly } =
+        useCrudForm<PermissionData>({
+            mode,
+            editData,
+            initialValues: {
+                id: null as number | null,
+                name: '',
+                guard_name: 'web',
+            },
+            transformData: transformPermissionData,
         });
-
-    useEffect(() => {
-        if (editData) {
-            setData({
-                id: editData.id,
-                name: editData.name,
-                guard_name: editData.guard_name,
-            });
-        } else {
-            reset();
-        }
-
-        clearErrors();
-    }, [editData, isOpen, reset, clearErrors, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (isReadOnly) {
+            return;
+        }
+
         const options = {
-            onSuccess: () => {
-                onClose();
-                reset();
-            },
+            onSuccess: () => closeModal(),
         };
 
         if (data.id) {
-            put(route('configuration.rermissions.update', data.id), options);
+            put(route('configuration.permissions.update', data.id), options);
         } else {
-            post(route('configuration.rermissions.store'), options);
+            post(route('configuration.permissions.store'), options);
         }
     };
 
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={closeModal}
             title={
-                !isReadOnly
-                    ? `Detail Permission`
-                    : data?.id
+                mode === ModalMode.CREATE
+                    ? 'Add New Permission'
+                    : mode === ModalMode.EDIT
                       ? 'Edit Permission'
-                      : 'Add New Permission'
+                      : 'Detail Permission'
             }
             maxWidth="md"
         >
             <form onSubmit={submit} className="space-y-4">
-                <fieldset disabled={!isReadOnly} className="space-y-6">
+                <fieldset disabled={isReadOnly} className="space-y-4">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Permission Name</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            placeholder="e.g. Administrator"
+                            placeholder="e.g. create configuration/users"
                             autoFocus
                         />
                         <InputError message={errors.name} />
@@ -103,18 +91,18 @@ export default function MenuFormModal({
                     </div>
                 </fieldset>
 
-                <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Cancel
+                <div className="flex justify-end gap-3 border-t pt-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeModal}
+                    >
+                        {isReadOnly ? 'Close' : 'Cancel'}
                     </Button>
-                    {isReadOnly && (
+                    {!isReadOnly && (
                         <Button type="submit" disabled={processing}>
-                            {processing
-                                ? 'Saving...'
-                                : data.id
-                                  ? 'Update Permission'
-                                  : 'Save Permission'}
-                        </Button>
+                            {mode === ModalMode.CREATE ? 'Save' : 'Update'}
+\                        </Button>
                     )}
                 </div>
             </form>

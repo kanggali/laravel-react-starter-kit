@@ -1,42 +1,26 @@
 import { useForm } from '@inertiajs/react';
 import { Search } from 'lucide-react';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
 import { Switch } from '@/components/ui/switch';
-
-interface Permission {
-    id: number;
-    action_name: string;
-}
-
-interface MenuWithPermissions {
-    id: number;
-    name: string;
-    main_menu_id: number | null;
-    permissions: Permission[];
-}
-
-interface RoleData {
-    id: number;
-    name: string;
-    guard_name: string;
-    permission_ids: number[];
-}
+import { useAccessRoleStore } from '@/stores/useAccessRoleStore';
+import type {
+    AccessRoleData,
+    MenuWithPermissions,
+    Permission,
+} from '@/types/access-role';
+import { ModalMode } from '@/types/enums';
 
 interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    role: RoleData | null;
     allMenus: MenuWithPermissions[];
-    allRoles: RoleData[];
-    isReadOnly: boolean;
+    allRoles: AccessRoleData[];
 }
 
-// Helper untuk mengurutkan aksi: READ, CREATE, UPDATE, DELETE, lalu sisanya
 const sortPermissions = (permissions: Permission[]) => {
     const priority = ['read', 'create', 'update', 'delete'];
 
@@ -60,27 +44,26 @@ const sortPermissions = (permissions: Permission[]) => {
     });
 };
 
-export default function AccessRoleFormModal({
-    isOpen,
-    onClose,
-    role,
-    allMenus,
-    allRoles,
-    isReadOnly,
-}: Props) {
-    const [searchQuery, setSearchQuery] = useState('');
+export default function AccessRoleFormModal({ allMenus, allRoles }: Props) {
+    const { mode, editData, closeModal, searchQuery, setSearchQuery } =
+        useAccessRoleStore();
 
     const { data, setData, put, processing, reset } = useForm({
         permission_ids: [] as number[],
     });
 
+    const isOpen = mode !== ModalMode.CLOSED;
+    const isReadOnly = mode === ModalMode.EDIT || mode === ModalMode.DETAIL;
+
     useEffect(() => {
-        if (role && isOpen) {
-            setData('permission_ids', role.permission_ids || []);
-        } else {
-            reset();
+        if (isOpen) {
+            if (editData) {
+                setData('permission_ids', editData.permission_ids || []);
+            } else {
+                reset();
+            }
         }
-    }, [role, isOpen, reset, setData]);
+    }, [isOpen, editData, reset, setData]);
 
     const handleCopyFromRole = (selectedRoleId: string) => {
         if (!selectedRoleId) {
@@ -135,31 +118,33 @@ export default function AccessRoleFormModal({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (role && isReadOnly) {
-            put(route('configuration.access-role.update', role.id), {
+        if (editData?.id && isReadOnly) {
+            put(route('configuration.access-role.update', editData.id), {
                 preserveScroll: true,
-                onSuccess: () => onClose(),
+                onSuccess: () => closeModal(),
             });
         }
+    };
+
+    const getModalTitle = () => {
+        if (mode === ModalMode.DETAIL) {
+            return `Detail Access Role: ${editData?.name}`;
+        }
+
+        return `Edit Access Role: ${editData?.name}`;
     };
 
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
-            title={
-                !isReadOnly
-                    ? `Detail Access Role: ${role?.name}`
-                    : `Edit Access Role: ${role?.name}`
-            }
-            maxWidth="4xl" // Diubah ke 4xl agar lebih lega untuk banyak switch
+            onClose={closeModal}
+            title={getModalTitle()}
+            maxWidth="4xl"
         >
-            {/* Wrapper flex-col dan max-height agar footer tetap di bawah */}
             <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
                 <div className="flex-1 overflow-y-auto px-1">
                     <fieldset disabled={!isReadOnly} className="space-y-6">
                         <div className="space-y-6 pb-4">
-                            {/* Area Filter */}
                             <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
@@ -176,7 +161,9 @@ export default function AccessRoleFormModal({
                                             Choose Role to Copy
                                         </option>
                                         {allRoles
-                                            .filter((r) => r.id !== role?.id)
+                                            .filter(
+                                                (r) => r.id !== editData?.id,
+                                            )
                                             .map((r) => (
                                                 <option key={r.id} value={r.id}>
                                                     {r.name}
@@ -202,7 +189,6 @@ export default function AccessRoleFormModal({
                                 </div>
                             </div>
 
-                            {/* Tabel Matriks */}
                             <div className="overflow-hidden rounded-md border">
                                 <table className="w-full text-sm">
                                     <thead className="border-b bg-muted/50">
@@ -229,7 +215,6 @@ export default function AccessRoleFormModal({
                                                     ),
                                                 );
 
-                                            // Sort permissions sebelum render
                                             const sortedPerms = sortPermissions(
                                                 menu.permissions,
                                             );
@@ -312,10 +297,14 @@ export default function AccessRoleFormModal({
                         </div>
                     </fieldset>
                 </div>
-                {/* Footer Tetap di Bawah */}
+
                 <div className="mt-4 flex justify-end gap-3 border-t pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Cancel
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeModal}
+                    >
+                        {isReadOnly ? 'Cancel' : 'Close'}
                     </Button>
                     {isReadOnly && (
                         <Button

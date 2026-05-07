@@ -1,3 +1,5 @@
+import { RoleData } from "./role";
+
 export type User = {
     id: number;
     name: string;
@@ -11,21 +13,44 @@ export type User = {
     [key: string]: unknown;
 };
 
-export type MenuItem = {
-    id: number;
+export interface MenuData {
+    id: number | null;
     name: string;
     url: string;
-    category?: string;
-    icon?: string;
-    active: boolean;
+    category: string;
+    icon: string;
+    main_menu_id: number | null;
+    active: boolean | number;
     orders: number;
-    main_menu_id?: number;
-    sub_menus?: MenuItem[];
-};
+    sub_menus?: MenuData[];
+}
+
+export interface AccessRoleData {
+    id: number;
+    name: string;
+    guard_name: string;
+    permission_ids: number[];
+}
+
+export interface AccessUserData {
+    id: number;
+    name: string;
+    email: string;
+    roles: RoleData[];
+    permission_ids: number[];
+}
+
+export interface UserManagementData {
+    id: number | null;
+    name: string;
+    username: string;
+    email: string;
+    roles: RoleData[];
+}
 
 export type Auth = {
     user: User;
-    sidebar: MenuItem[];
+    sidebar: MenuData[];
 };
 
 export type TwoFactorSetupData = {

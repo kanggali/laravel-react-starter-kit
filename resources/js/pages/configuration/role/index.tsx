@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Plus, Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/ui/confirm-modal';
@@ -21,15 +21,9 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
+import { useRoleStore } from '@/stores/useRoleStore';
+import type { RoleData } from '@/types/role';
 import RoleFormModal from './form';
-
-interface RoleData {
-    id: number;
-    name: string;
-    guard_name: string;
-    created_at: string;
-    permissions_count?: number;
-}
 
 interface PaginationProps {
     data: RoleData[];
@@ -47,47 +41,31 @@ export default function RoleIndex({
     filters: any;
 }) {
     const confirm = useConfirm<RoleData>();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isReadOnly, setIsReadOnly] = useState(false);
-
     const { can } = usePermission();
 
+    const { openAdd, openEdit, openDetail } = useRoleStore();
+
     useEffect(() => {
+        const isSearchChanged = searchTerm !== (filters.search || '');
+        const isPerPageChanged = perPage !== (filters.per_page || '10');
+
+        if (!isSearchChanged && !isPerPageChanged) {
+            return;
+        }
+
         const delayDebounceFn = setTimeout(() => {
-            if (
-                searchTerm !== (filters.search || '') ||
-                perPage !== (filters.per_page || '10')
-            ) {
-                router.get(
-                    route('configuration.roles.index'),
-                    { search: searchTerm, per_page: perPage, page: 1 },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                    },
-                );
-            }
+            router.get(
+                route('configuration.roles.index'),
+                { search: searchTerm, per_page: perPage, page: 1 },
+                { preserveState: true, replace: true, preserveScroll: true },
+            );
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
-
-    const handleAdd = () => {
-        setEditData(null);
-        setIsReadOnly(true);
-        setIsModalOpen(true);
-    };
-
-    const handleEdit = (role: any, mode: boolean = true) => {
-        setEditData(role);
-        setIsReadOnly(mode);
-        setIsModalOpen(true);
-    };
 
     const handleConfirmDelete = () => {
         if (!confirm.data?.id) {
@@ -116,19 +94,19 @@ export default function RoleIndex({
                             Role Management
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Kelola role navigasi sistem.
+                            Kelola role akses sistem.
                         </p>
                     </div>
                     {can('create configuration/roles') && (
-                        <Button onClick={handleAdd}>
+                        <Button onClick={openAdd}>
                             <Plus className="mr-2 h-4 w-4" /> Add Role
                         </Button>
                     )}
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
-                    <div className="flex w-full max-w-sm items-center gap-3">
-                        <div className="relative flex-1">
+                    <div className="flex w-full max-w-sm items-center gap-3 max-sm:flex-col">
+                        <div className="relative w-full flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search role..."
@@ -149,9 +127,6 @@ export default function RoleIndex({
                             ))}
                         </select>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                        Showing {roles.from}-{roles.to} of {roles.total}
-                    </div>
                 </div>
 
                 <div className="overflow-hidden rounded-md border bg-card">
@@ -159,9 +134,8 @@ export default function RoleIndex({
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-12">#</TableHead>
-
-                                <TableHead>Role</TableHead>
-                                <TableHead className="w-12">Guard</TableHead>
+                                <TableHead>Role Name</TableHead>
+                                <TableHead>Guard</TableHead>
                                 <TableHead className="text-right">
                                     Actions
                                 </TableHead>
@@ -177,17 +151,20 @@ export default function RoleIndex({
                                         <TableCell className="font-medium">
                                             {role.name}
                                         </TableCell>
-                                        <TableCell>{role.guard_name}</TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {role.guard_name}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                route="configuration/roles"
-                                                onEdit={(mode) =>
-                                                    handleEdit(role, mode)
+                                                onEdit={(isEdit) =>
+                                                    isEdit
+                                                        ? openEdit(role)
+                                                        : openDetail(role)
                                                 }
                                                 onDelete={() =>
                                                     confirm.open(role)
                                                 }
-                                            ></TableAction>
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -205,6 +182,7 @@ export default function RoleIndex({
                     </Table>
                 </div>
 
+                {/* Pagination */}
                 <div className="mt-4 flex justify-center">
                     <Pagination>
                         <PaginationContent>
@@ -230,12 +208,7 @@ export default function RoleIndex({
                 </div>
             </div>
 
-            <RoleFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                editData={editData}
-                isReadOnly={isReadOnly}
-            />
+            <RoleFormModal />
 
             <ConfirmModal
                 isOpen={confirm.isOpen}
@@ -243,12 +216,6 @@ export default function RoleIndex({
                 onConfirm={handleConfirmDelete}
                 loading={isDeleting}
                 title="Hapus Role"
-                description={
-                    <span>
-                        Apakah anda yakin akan menghapus data{' '}
-                        <strong>"{confirm.data?.name}"</strong>. Lanjutkan?
-                    </span>
-                }
             />
         </>
     );

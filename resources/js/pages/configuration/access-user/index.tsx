@@ -19,23 +19,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import TableAction from '@/components/ui/table-action';
+import { useAccessUserStore } from '@/stores/useAccessUserStore';
+import type { AccessUserData } from '@/types/auth';
 import AccessUserFormModal from './form';
 
-interface Role {
-    id: number;
-    name: string;
-}
-
-interface UserData {
-    id: number;
-    name: string;
-    email: string;
-    roles: Role[];
-    permission_ids: number[];
-}
-
 interface PaginationProps {
-    data: UserData[];
+    data: AccessUserData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
@@ -51,45 +40,39 @@ export default function AccessUserIndex({
     users: PaginationProps;
     filters: any;
     allMenus: any[];
-    allUsers: any[];
+    allUsers: AccessUserData[];
 }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<UserData | null>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
-    const [isReadOnly, setIsReadOnly] = useState(false);
+
+    const { openEdit, openDetail } = useAccessUserStore();
 
     useEffect(() => {
+        const isSearchChanged = searchTerm !== (filters.search || '');
+        const isPerPageChanged = perPage !== (filters.per_page || '10');
+
+        if (!isSearchChanged && !isPerPageChanged) {
+            return;
+        }
+
         const delayDebounceFn = setTimeout(() => {
-            // Pengecekan apakah nilai berubah sebelum melakukan request
-            if (
-                searchTerm !== (filters.search || '') ||
-                perPage !== (filters.per_page || '10')
-            ) {
-                router.get(
-                    route('configuration.access-user.index'),
-                    {
-                        search: searchTerm,
-                        per_page: perPage,
-                        page: 1,
-                    },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                    },
-                );
-            }
+            router.get(
+                route('configuration.access-user.index'),
+                {
+                    search: searchTerm,
+                    per_page: perPage,
+                    page: 1,
+                },
+                {
+                    preserveState: true,
+                    replace: true,
+                    preserveScroll: true,
+                },
+            );
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
-
-    const handleEdit = (user: UserData, mode: boolean = true) => {
-        setEditData(user);
-        setIsReadOnly(mode);
-        setIsModalOpen(true);
-    };
 
     return (
         <>
@@ -106,12 +89,11 @@ export default function AccessUserIndex({
                             sistem.
                         </p>
                     </div>
-                    {/* Tombol Add User Dihilangkan sesuai permintaan */}
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex w-full max-w-sm items-center gap-3">
-                        <div className="relative flex-1">
+                        <div className="relative w-full flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search user..."
@@ -165,10 +147,15 @@ export default function AccessUserIndex({
                                             {user.email}
                                         </TableCell>
                                         <TableCell>
-                                            {user.roles.map((role) => (
+                                            {user.roles.map((role, i) => (
                                                 <Badge
                                                     key={role.id}
-                                                    className="border-none bg-cyan-500 text-white hover:bg-cyan-600"
+                                                    className={`rounded-lg border-none bg-cyan-500 text-white hover:bg-cyan-600 ${
+                                                        i <
+                                                        user.roles.length - 1
+                                                            ? 'mr-1'
+                                                            : ''
+                                                    }`}
                                                 >
                                                     {role.name}
                                                 </Badge>
@@ -176,9 +163,10 @@ export default function AccessUserIndex({
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                route="configuration/access-user" // Sesuaikan route permission
-                                                onEdit={(mode) =>
-                                                    handleEdit(user, mode)
+                                                onEdit={(isEditMode) =>
+                                                    isEditMode
+                                                        ? openEdit(user)
+                                                        : openDetail(user)
                                                 }
                                             />
                                         </TableCell>
@@ -187,10 +175,10 @@ export default function AccessUserIndex({
                             ) : (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={4}
-                                        className="h-24 text-center"
+                                        colSpan={5}
+                                        className="h-24 text-center text-muted-foreground"
                                     >
-                                        No results.
+                                        No data found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -223,15 +211,7 @@ export default function AccessUserIndex({
                 </div>
             </div>
 
-            {/* Modal Form Matriks sesuai Gambar 2 */}
-            <AccessUserFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                user={editData}
-                allMenus={allMenus}
-                allUsers={allUsers}
-                isReadOnly={isReadOnly}
-            />
+            <AccessUserFormModal allMenus={allMenus} allUsers={allUsers} />
         </>
     );
 }

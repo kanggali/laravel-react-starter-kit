@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Plus, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
@@ -21,18 +22,13 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
+import { useUserStore } from '@/stores/useUserStore';
+import type { UserManagementData } from '@/types/auth';
+import type { RoleData } from '@/types/role';
 import UserFormModal from './form';
 
-interface UserData {
-    id: number;
-    name: string;
-    username: string;
-    email: string;
-    roles: { id: number; name: string }[];
-}
-
 interface PaginationProps {
-    data: UserData[];
+    data: UserManagementData[];
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
     from: number;
@@ -45,52 +41,39 @@ export default function UserIndex({
     filters,
 }: {
     users: PaginationProps;
-    allRoles: { id: number; name: string }[];
+    allRoles: RoleData[];
     filters: any;
 }) {
-    const confirm = useConfirm<UserData>();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<UserData | null>(null);
+    const confirm = useConfirm<UserManagementData>();
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isReadOnly, setIsReadOnly] = useState(false);
-
     const { can } = usePermission();
 
-    // Debounce search dan per_page
+    const { openAdd, openEdit, openDetail } = useUserStore();
+
     useEffect(() => {
+        const isSearchChanged = searchTerm !== (filters.search || '');
+        const isPerPageChanged = perPage !== (filters.per_page || '10');
+
+        if (!isSearchChanged && !isPerPageChanged) {
+            return;
+        }
+
         const delayDebounceFn = setTimeout(() => {
-            if (
-                searchTerm !== (filters.search || '') ||
-                perPage !== (filters.per_page || '10')
-            ) {
-                router.get(
-                    route('configuration.users.index'),
-                    { search: searchTerm, per_page: perPage, page: 1 },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                    },
-                );
-            }
+            router.get(
+                route('configuration.users.index'),
+                { search: searchTerm, per_page: perPage, page: 1 },
+                {
+                    preserveState: true,
+                    replace: true,
+                    preserveScroll: true,
+                },
+            );
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
-
-    const handleAdd = () => {
-        setEditData(null);
-        setIsReadOnly(true);
-        setIsModalOpen(true);
-    };
-
-    const handleEdit = (user: UserData, mode: boolean = false) => {
-        setEditData(user);
-        setIsReadOnly(mode);
-        setIsModalOpen(true);
-    };
 
     const handleConfirmDelete = () => {
         if (!confirm.data?.id) {
@@ -123,7 +106,7 @@ export default function UserIndex({
                         </p>
                     </div>
                     {can('create configuration/users') && (
-                        <Button onClick={handleAdd}>
+                        <Button onClick={openAdd}>
                             <Plus className="mr-2 h-4 w-4" /> Add User
                         </Button>
                     )}
@@ -131,7 +114,7 @@ export default function UserIndex({
 
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex w-full max-w-sm items-center gap-3">
-                        <div className="relative flex-1">
+                        <div className="relative w-full flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search user..."
@@ -182,22 +165,26 @@ export default function UserIndex({
                                         </TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <div className="flex flex-wrap gap-1">
-                                                {user.roles.map((role) => (
-                                                    <span
-                                                        key={role.id}
-                                                        className="inline-flex items-center rounded bg-cyan-400 px-2 py-0.5 text-[10px] font-bold text-white uppercase"
-                                                    >
-                                                        {role.name}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            {user.roles.map((role, i) => (
+                                                <Badge
+                                                    key={role.id}
+                                                    className={`rounded-lg border-none bg-cyan-500 text-white hover:bg-primary ${
+                                                        i <
+                                                        user.roles.length - 1
+                                                            ? 'mr-1'
+                                                            : ''
+                                                    }`}
+                                                >
+                                                    {role.name}
+                                                </Badge>
+                                            ))}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <TableAction
-                                                route="configuration/users"
-                                                onEdit={(mode) =>
-                                                    handleEdit(user, mode)
+                                                onEdit={(isEditMode) =>
+                                                    isEditMode
+                                                        ? openEdit(user)
+                                                        : openDetail(user)
                                                 }
                                                 onDelete={() =>
                                                     confirm.open(user)
@@ -210,9 +197,9 @@ export default function UserIndex({
                                 <TableRow>
                                     <TableCell
                                         colSpan={5}
-                                        className="h-24 text-center"
+                                        className="h-24 text-center text-muted-foreground"
                                     >
-                                        No users found.
+                                        No data found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -245,13 +232,7 @@ export default function UserIndex({
                 </div>
             </div>
 
-            <UserFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                editUser={editData}
-                allRoles={allRoles}
-                isReadOnly={isReadOnly}
-            />
+            <UserFormModal allRoles={allRoles} />
 
             <ConfirmModal
                 isOpen={confirm.isOpen}

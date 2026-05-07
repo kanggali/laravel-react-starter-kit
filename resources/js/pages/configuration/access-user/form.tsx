@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { Search } from 'lucide-react';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,39 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
 import { Switch } from '@/components/ui/switch';
+import { useAccessUserStore } from '@/stores/useAccessUserStore';
+import type { MenuWithPermissions, Permission } from '@/types/access-role';
+import { ModalMode } from '@/types/enums';
+import type { RoleData } from '@/types/role';
 
-interface Permission {
-    id: number;
-    action_name: string;
-}
-
-interface MenuWithPermissions {
-    id: number;
-    name: string;
-    main_menu_id: number | null;
-    permissions: Permission[];
-}
-
-interface Role {
-    id: number;
-    name: string;
-}
-
-interface UserData {
+interface AccessUserData {
     id: number;
     name: string;
     email: string;
-    roles: Role[];
+    roles: RoleData[];
     permission_ids: number[];
 }
 
 interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    user: UserData | null;
     allMenus: MenuWithPermissions[];
-    allUsers: UserData[];
-    isReadOnly: boolean;
+    allUsers: AccessUserData[];
 }
 
 const sortPermissions = (permissions: Permission[]) => {
@@ -66,29 +49,32 @@ const sortPermissions = (permissions: Permission[]) => {
     });
 };
 
-export default function AccessUserFormModal({
-    isOpen,
-    onClose,
-    user,
-    allMenus,
-    allUsers,
-    isReadOnly,
-}: Props) {
-    const [searchQuery, setSearchQuery] = useState('');
+export default function AccessUserFormModal({ allMenus, allUsers }: Props) {
+    const { mode, editData, closeModal, searchQuery, setSearchQuery } =
+        useAccessUserStore();
 
     const { data, setData, put, processing, reset } = useForm({
         permission_ids: [] as number[],
     });
 
+    const isOpen = mode !== ModalMode.CLOSED;
+    const isReadOnly = mode === ModalMode.EDIT || mode === ModalMode.DETAIL;
+
     useEffect(() => {
-        if (user && isOpen) {
-            setData('permission_ids', user.permission_ids || []);
-        } else if (!isOpen) {
-            reset();
+        if (isOpen) {
+            if (editData) {
+                setData('permission_ids', editData.permission_ids || []);
+            } else {
+                reset();
+            }
         }
-    }, [user, isOpen, setData, reset]);
+    }, [isOpen, editData, reset, setData]);
 
     const handleCopyFromUser = (selectedUserId: string) => {
+        if (!selectedUserId) {
+            return;
+        }
+
         const selectedUser = allUsers.find(
             (u) => u.id === parseInt(selectedUserId),
         );
@@ -137,66 +123,60 @@ export default function AccessUserFormModal({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (user && isReadOnly) {
-            put(route('configuration.access-user.update', user.id), {
+        if (editData?.id && isReadOnly) {
+            put(route('configuration.access-user.update', editData.id), {
                 preserveScroll: true,
-                onSuccess: () => onClose(),
+                onSuccess: () => closeModal(),
             });
         }
+    };
+
+    const getModalTitle = () => {
+        if (mode === ModalMode.DETAIL) {
+            return `Detail Access User: ${editData?.name}`;
+        }
+
+        return `Edit Access User: ${editData?.name}`;
     };
 
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
-            title={isReadOnly ? 'Detail Access User' : 'Edit Access User'}
+            onClose={closeModal}
+            title={getModalTitle()}
             maxWidth="4xl"
         >
             <form onSubmit={submit} className="flex max-h-[85vh] flex-col">
                 <div className="flex-1 overflow-y-auto px-1">
-                    <fieldset disabled={isReadOnly} className="space-y-6">
+                    <fieldset disabled={!isReadOnly} className="space-y-6">
                         <div className="space-y-6 pb-4">
-                            {/* Header Nama User sesuai Gambar 2 */}
-                            <h2 className="mt-2 text-xl font-bold text-[#2e59d9] uppercase">
-                                User: {user?.name}
-                            </h2>
-
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                {!isReadOnly && (
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                                            Copy from user
-                                        </Label>
-                                        <select
-                                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none"
-                                            onChange={(e) =>
-                                                handleCopyFromUser(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            value=""
-                                        >
-                                            <option value="" disabled>
-                                                Choose User to Copy
-                                            </option>
-                                            {allUsers
-                                                .filter(
-                                                    (u) => u.id !== user?.id,
-                                                )
-                                                .map((u) => (
-                                                    <option
-                                                        key={u.id}
-                                                        value={u.id}
-                                                    >
-                                                        {u.name}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                    </div>
-                                )}
-                                <div
-                                    className={`space-y-2 ${isReadOnly ? 'md:col-span-2' : ''}`}
-                                >
+                            <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                                        Copy from user
+                                    </Label>
+                                    <select
+                                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring"
+                                        onChange={(e) =>
+                                            handleCopyFromUser(e.target.value)
+                                        }
+                                        value=""
+                                    >
+                                        <option value="" disabled>
+                                            Choose User to Copy
+                                        </option>
+                                        {allUsers
+                                            .filter(
+                                                (u) => u.id !== editData?.id,
+                                            )
+                                            .map((u) => (
+                                                <option key={u.id} value={u.id}>
+                                                    {u.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
                                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                         Search Menu
                                     </Label>
@@ -316,10 +296,14 @@ export default function AccessUserFormModal({
                 </div>
 
                 <div className="mt-4 flex justify-end gap-3 border-t pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        {isReadOnly ? 'Close' : 'Cancel'}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeModal}
+                    >
+                        {isReadOnly ? 'Cancel' : 'Close'}
                     </Button>
-                    {!isReadOnly && (
+                    {isReadOnly && (
                         <Button type="submit" disabled={processing}>
                             {processing ? 'Saving...' : 'Save Changes'}
                         </Button>

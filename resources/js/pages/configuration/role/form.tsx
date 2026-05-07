@@ -1,63 +1,41 @@
-import { useForm } from '@inertiajs/react';
-import React, { useEffect } from 'react';
+import React from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Modal from '@/components/ui/modal';
+import { useCrudForm } from '@/hooks/use-crud-form';
+import { useRoleStore } from '@/stores/useRoleStore';
+import { ModalMode } from '@/types/enums';
+import type { RoleData } from '@/types/role';
 
-interface RoleData {
-    id: number | null;
-    name: string;
-    guard_name: string;
-}
+export default function RoleFormModal() {
+    const { mode, editData, closeModal } = useRoleStore();
 
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    editData: RoleData | null;
-    isReadOnly: boolean;
-}
-
-export default function MenuFormModal({
-    isOpen,
-    onClose,
-    editData,
-    isReadOnly,
-}: Props) {
-    const { data, setData, post, put, processing, errors, reset, clearErrors } =
-        useForm({
-            id: null as number | null,
-            name: '',
-            guard_name: 'web',
+    // Inisialisasi form menggunakan custom hook
+    const { data, setData, post, put, processing, errors, isOpen, isReadOnly } =
+        useCrudForm<RoleData>({
+            mode,
+            editData,
+            initialValues: {
+                name: '',
+                guard_name: 'web',
+            },
         });
-
-    useEffect(() => {
-        if (editData) {
-            setData({
-                id: editData.id,
-                name: editData.name,
-                guard_name: editData.guard_name,
-            });
-        } else {
-            reset();
-        }
-
-        clearErrors();
-    }, [editData, isOpen, reset, clearErrors, setData]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (isReadOnly) {
+            return;
+        }
 
         const options = {
-            onSuccess: () => {
-                onClose();
-                reset();
-            },
+            onSuccess: () => closeModal(),
         };
 
-        if (data.id) {
-            put(route('configuration.roles.update', data.id), options);
+        if (mode === ModalMode.EDIT && editData?.id) {
+            put(route('configuration.roles.update', editData.id), options);
         } else {
             post(route('configuration.roles.store'), options);
         }
@@ -66,30 +44,31 @@ export default function MenuFormModal({
     return (
         <Modal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={closeModal}
             title={
-                !isReadOnly
-                    ? `Detail Role`
-                    : data?.id
+                mode === ModalMode.CREATE
+                    ? 'Add New Role'
+                    : mode === ModalMode.EDIT
                       ? 'Edit Role'
-                      : 'Add New Role'
+                      : 'Detail Role'
             }
             maxWidth="md"
         >
             <form onSubmit={submit} className="space-y-4">
-                <fieldset disabled={!isReadOnly} className="space-y-6">
+                <fieldset disabled={isReadOnly} className="space-y-4">
+                    {/* Input Nama Role */}
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Role Name</Label>
+                        <Label htmlFor="role_name">Role Name</Label>
                         <Input
-                            id="name"
+                            id="role_name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             placeholder="e.g. Administrator"
-                            autoFocus
                         />
                         <InputError message={errors.name} />
                     </div>
 
+                    {/* Input Guard Name */}
                     <div className="grid gap-2">
                         <Label htmlFor="guard_name">Guard Name</Label>
                         <Input
@@ -98,21 +77,23 @@ export default function MenuFormModal({
                             onChange={(e) =>
                                 setData('guard_name', e.target.value)
                             }
+                            placeholder="web"
                         />
                         <InputError message={errors.guard_name} />
                     </div>
                 </fieldset>
-                <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Cancel
+
+                <div className="flex justify-end gap-3 border-t pt-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeModal}
+                    >
+                        {isReadOnly ? 'Close' : 'Cancel'}
                     </Button>
-                    {isReadOnly && (
+                    {!isReadOnly && (
                         <Button type="submit" disabled={processing}>
-                            {processing
-                                ? 'Saving...'
-                                : data.id
-                                  ? 'Update Role'
-                                  : 'Save Role'}
+                            {mode === ModalMode.CREATE ? 'Save' : 'Update'}
                         </Button>
                     )}
                 </div>

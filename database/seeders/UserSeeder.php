@@ -13,7 +13,27 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $faker = Factory::create();
-        $roles = ['lecturer', 'assessment', 'administrator', 'superadmin', 'prodi', 'pjblok'];
+        $roles = [
+            'lecturer',
+            'assessment',
+            'administrator',
+            'superadmin',
+            'prodi',
+            'pjblok',
+            'fakultas',
+            'bdi',
+            'keuangan',
+            'rektorat',
+            'baum',
+            'student',
+            'guest',
+            'admin_rpl',
+            'admin_penmaru',
+            'komkordik',
+            'bimawa',
+            'bim',
+            'oic'
+        ];
 
         foreach ($roles as $roleName) {
             $user = User::create([

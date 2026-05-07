@@ -22,17 +22,9 @@ import {
 import TableAction from '@/components/ui/table-action';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePermission } from '@/hooks/use-permission';
+import { useMenuStore } from '@/stores/useMenuStore'; // Gunakan Store
+import type { MenuData } from '@/types/auth';
 import MenuFormModal from './form';
-
-interface MenuData {
-    id: number;
-    name: string;
-    url: string;
-    category: string;
-    icon: string;
-    main_menu_id?: number | null;
-    sub_menus?: MenuData[];
-}
 
 interface PaginationProps {
     data: MenuData[];
@@ -50,52 +42,41 @@ export default function MenuIndex({
     filters: any;
 }) {
     const confirm = useConfirm<MenuData>();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editData, setEditData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isDeleting, setIsDeleting] = useState(false);
     const { can } = usePermission();
-    const [isReadOnly, setIsReadOnly] = useState(false);
 
-    const parentMenus = menus.data.map((m) => ({ id: m.id, name: m.name }));
+    const { openAdd, openEdit, openDetail } = useMenuStore();
+
+    const parentMenus = menus.data.map((m) => ({
+        id: m.id ?? null,
+        name: m.name,
+    }));
 
     useEffect(() => {
+        const isSearchChanged = searchTerm !== (filters.search || '');
+        const isPerPageChanged = perPage !== (filters.per_page || '10');
+
+        if (!isSearchChanged && !isPerPageChanged) return;
+
         const delayDebounceFn = setTimeout(() => {
-            if (
-                searchTerm !== (filters.search || '') ||
-                perPage !== (filters.per_page || '10')
-            ) {
-                router.get(
-                    route('configuration.menu.index'),
-                    { search: searchTerm, per_page: perPage, page: 1 },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                    },
-                );
-            }
+            router.get(
+                route('configuration.menu.index'),
+                { search: searchTerm, per_page: perPage, page: 1 },
+                {
+                    preserveState: true,
+                    replace: true,
+                    preserveScroll: true,
+                },
+            );
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, perPage, filters.search, filters.per_page]);
 
-    const handleAdd = () => {
-        setEditData(null);
-        setIsModalOpen(true);
-    };
-
-    const handleEdit = (menu: any, mode: boolean = true) => {
-        setEditData(menu);
-        setIsReadOnly(mode);
-        setIsModalOpen(true);
-    };
-
     const handleConfirmDelete = () => {
-        if (!confirm.data?.id) {
-            return;
-        }
+        if (!confirm.data?.id) return;
 
         setIsDeleting(true);
         router.delete(route('configuration.menu.destroy', confirm.data?.id), {
@@ -111,7 +92,6 @@ export default function MenuIndex({
     return (
         <>
             <Head title="Menu Management" />
-
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between">
                     <div>
@@ -123,7 +103,7 @@ export default function MenuIndex({
                         </p>
                     </div>
                     {can('create configuration/menu') && (
-                        <Button onClick={handleAdd}>
+                        <Button onClick={openAdd}>
                             <Plus className="mr-2 h-4 w-4" /> Add Menu
                         </Button>
                     )}
@@ -131,7 +111,7 @@ export default function MenuIndex({
 
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex w-full max-w-sm items-center gap-3">
-                        <div className="relative flex-1">
+                        <div className="relative w-full flex-1">
                             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search menu..."
@@ -152,9 +132,6 @@ export default function MenuIndex({
                             ))}
                         </select>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                        Showing {menus.from}-{menus.to} of {menus.total}
-                    </div>
                 </div>
 
                 <div className="overflow-hidden rounded-md border bg-card">
@@ -164,7 +141,6 @@ export default function MenuIndex({
                                 <TableHead className="w-12">Icon</TableHead>
                                 <TableHead>Menu Name</TableHead>
                                 <TableHead>URL</TableHead>
-                                <TableHead>Category</TableHead>
                                 <TableHead className="text-right">
                                     Actions
                                 </TableHead>
@@ -181,18 +157,15 @@ export default function MenuIndex({
                                                 />
                                             </TableCell>
                                             <TableCell>{menu.name}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 /{menu.url}
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="rounded bg-secondary px-2 py-0.5 text-[10px] font-bold">
-                                                    {menu.category}
-                                                </span>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <TableAction
-                                                    onEdit={(mode) =>
-                                                        handleEdit(menu, mode)
+                                                    onEdit={(isEditMode) =>
+                                                        isEditMode
+                                                            ? openEdit(menu)
+                                                            : openDetail(menu)
                                                     }
                                                     onDelete={() =>
                                                         confirm.open(menu)
@@ -200,7 +173,6 @@ export default function MenuIndex({
                                                 />
                                             </TableCell>
                                         </TableRow>
-
                                         {menu.sub_menus?.map((sub) => (
                                             <TableRow
                                                 key={sub.id}
@@ -211,23 +183,20 @@ export default function MenuIndex({
                                                         iconName={sub.icon}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="pl-10 text-sm text-muted-foreground">
+                                                <TableCell className="pl-10 text-sm">
                                                     {sub.name}
                                                 </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
+                                                <TableCell className="text-xs opacity-60">
                                                     /{sub.url}
-                                                </TableCell>
-                                                <TableCell className="text-[11px] text-muted-foreground">
-                                                    {sub.category}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <TableAction
-                                                        route="configuration/menu"
-                                                        onEdit={(mode) =>
-                                                            handleEdit(
-                                                                sub,
-                                                                mode,
-                                                            )
+                                                        onEdit={(isEditMode) =>
+                                                            isEditMode
+                                                                ? openEdit(sub)
+                                                                : openDetail(
+                                                                      sub,
+                                                                  )
                                                         }
                                                         onDelete={() =>
                                                             confirm.open(sub)
@@ -241,10 +210,10 @@ export default function MenuIndex({
                             ) : (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5}
-                                        className="h-24 text-center"
+                                        colSpan={4}
+                                        className="h-24 text-center text-muted-foreground"
                                     >
-                                        No results found.
+                                        No data found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -277,13 +246,9 @@ export default function MenuIndex({
                 </div>
             </div>
 
-            <MenuFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                editData={editData}
-                parentMenus={parentMenus}
-                isReadOnly={isReadOnly}
-            />
+
+            {/* Modal sekarang hanya butuh parentMenus, sisanya ambil dari Store */}
+            <MenuFormModal parentMenus={parentMenus} />
 
             <ConfirmModal
                 isOpen={confirm.isOpen}
@@ -293,8 +258,9 @@ export default function MenuIndex({
                 title="Hapus Menu"
                 description={
                     <span>
-                        Apakah anda yakin akan menghapus data{' '}
-                        <strong>"{confirm.data?.name}"</strong>. Lanjutkan?
+                        Apakah anda yakin ingin menghapus{' '}
+                        <strong>{confirm.data?.name}</strong>? Tindakan ini
+                        tidak dapat dibatalkan.
                     </span>
                 }
             />
@@ -309,6 +275,6 @@ function IconRenderer({ iconName }: { iconName: string }) {
     return Icon ? (
         <Icon className="size-4" />
     ) : (
-        <HelpCircle className="size-4 text-muted-foreground/50" />
+        <HelpCircle className="size-4 opacity-20" />
     );
 }

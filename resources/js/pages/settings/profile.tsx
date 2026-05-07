@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage, router } from '@inertiajs/react';
+import { Form, Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react'; // Tambahkan ini
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
-import { send } from '@/routes/verification';
 
 interface ProfileProps {
     mustVerifyEmail: boolean;
