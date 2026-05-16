@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\Attendance;
 use Illuminate\Http\Request;
+use \Illuminate\Pagination\LengthAwarePaginator;
+use \Carbon\Carbon;
+use \Carbon\CarbonPeriod;
 
 class AttendanceService
 {
@@ -39,7 +42,7 @@ class AttendanceService
         $totalUniqueEmails = $allUniqueEmails->count();
         $emails = $allUniqueEmails->slice(($page - 1) * $perPage, $perPage)->values()->toArray();
 
-        $paginatedEmails = new \Illuminate\Pagination\LengthAwarePaginator(
+        $paginatedEmails = new LengthAwarePaginator(
             $emails,
             $totalUniqueEmails,
             $perPage,
@@ -54,20 +57,13 @@ class AttendanceService
             ->orderBy('attendanceCreatedAt', 'asc')
             ->get();
 
-        // Try to fetch employee details if they exist in the DB
-        $employees = \App\Models\Master\Employee::with('department')
-            ->whereIn('email', $emails)
-            ->get()
-            ->keyBy('email');
-
         $data = [];
 
         foreach ($emails as $email) {
             $employeeAttendances = $attendances->where('attendanceEmail', $email);
-            $employee = $employees->get($email);
             
             $groupedByDate = $employeeAttendances->groupBy(function ($item) {
-                return \Carbon\Carbon::parse($item->attendanceCreatedAt)->format('Y-m-d');
+                return Carbon::parse($item->attendanceCreatedAt)->format('Y-m-d');
             });
 
             $attendanceDetails = [];
@@ -76,7 +72,7 @@ class AttendanceService
             $totalAbsent = 0;
             $totalWorkingSeconds = 0;
 
-            $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+            $period = CarbonPeriod::create($startDate, $endDate);
             
             foreach ($period as $dateObj) {
                 $isWeekend = $dateObj->isWeekend();
@@ -114,7 +110,7 @@ class AttendanceService
                 $workingHoursStr = "00:00:00";
                 
                 if ($checkInRecord && $checkOutRecord) {
-                    $checkOutTime = \Carbon\Carbon::parse($checkOutRecord->attendanceCreatedAt);
+                    $checkOutTime = Carbon::parse($checkOutRecord->attendanceCreatedAt);
                     // Ensure difference is always absolute positive seconds
                     $diffSeconds = abs($checkOutTime->getTimestamp() - $checkInTime->getTimestamp());
                     $totalWorkingSeconds += $diffSeconds;
@@ -138,7 +134,7 @@ class AttendanceService
                         ] : null,
                         'checkOut' => $checkOutRecord ? [
                             'id' => $checkOutRecord->id,
-                            'time' => \Carbon\Carbon::parse($checkOutRecord->attendanceCreatedAt)->toIso8601String(),
+                            'time' => Carbon::parse($checkOutRecord->attendanceCreatedAt)->toIso8601String(),
                             'location' => $checkOutRecord->attendanceLocation,
                         ] : null,
                     ]
@@ -153,8 +149,8 @@ class AttendanceService
 
             $data[] = [
                 'user' => [
-                    'id' => $employee ? $employee->id : md5($email),
-                    'name' => $employee ? $employee->full_name : explode('@', $email)[0],
+                    'id' => md5($email),
+                    'name' => explode('@', $email)[0],
                     'email' => $email,
                     'location' => $latestAttendance ? $latestAttendance->attendanceLocation : 'N/A',
                 ],
